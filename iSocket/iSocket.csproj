@@ -4,4 +4,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MessagePack" Version="2.1.115" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.4" />
+    <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
+  </ItemGroup>
+
 </Project>

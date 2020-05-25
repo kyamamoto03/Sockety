@@ -1,4 +1,5 @@
 ﻿using System;
+using iSocket.Client;
 
 namespace iSocketClient
 {
@@ -6,7 +7,9 @@ namespace iSocketClient
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var client = new Client();
+            client.Connect("localhost", 11000);
+            
         }
     }
 }
