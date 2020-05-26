@@ -12,7 +12,7 @@ namespace iSocketServer
             Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) =>
             {
-                services.AddHostedService<Server>();
+                services.AddHostedService<ServerLoop>();
             });
 
         static void Main(string[] args)
@@ -23,6 +23,7 @@ namespace iSocketServer
             }
             catch (OperationCanceledException)
             { }
+
         }
     }
 }

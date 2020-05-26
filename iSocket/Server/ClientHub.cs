@@ -3,6 +3,7 @@ using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,28 +33,24 @@ namespace iSocket.Server
         }
 
        
+        internal void SendNonReturn(string ClientMethodName,byte[] data)
+        {
+            try
+            {
+                var packet = new ISocketPacket() { MethodName = ClientMethodName, PackData = data };
+                var d = MessagePackSerializer.Serialize(packet);
+                handler.Send(d);
+            }catch(Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         public void Run()
         {
             thread = new Thread(new ThreadStart(Process));
             thread.Start();
 
-            Task.Run(() =>
-            {
-                int cnt = 0;
-                while (true)
-                {
-
-                    if (cnt++ == 5)
-                    {
-                        var packet = new ISocketPacket();
-                        packet.MethodName = "Push";
-                        handler.Send(MessagePackSerializer.Serialize(packet));
-                        cnt = 0;
-                    }
-                    System.Threading.Thread.Sleep(1200);   
-                }
-
-            });
         }
 
         private void Process()

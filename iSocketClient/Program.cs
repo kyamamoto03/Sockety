@@ -12,7 +12,7 @@ namespace iSocketClient
             w.Start();
         }
     }
-    class Work : Share.IClient
+    class Work 
     {
         public void UserJoin(byte[] packet)
         {
@@ -28,14 +28,9 @@ namespace iSocketClient
         {
             var client = new Client<Work>();
 
-            client.Connect("localhost", 11000,this);
+            client.Connect("192.168.2.12", 11000,"ConsoleApp",this);
             while(true)
             {
-                byte[] msg = Encoding.ASCII.GetBytes(DateTime.Now.ToString());
-                byte[] response = client.clientReceiver.Send("Echo",msg);
-                Console.WriteLine("{0}",
-                    System.Text.Encoding.ASCII.GetString(response, 0, response.Length));
-
                 System.Threading.Thread.Sleep(2000);
             }
         }

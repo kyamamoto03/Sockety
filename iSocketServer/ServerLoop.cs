@@ -1,17 +1,17 @@
 ﻿using iSocket.Model;
+using iSocket.Server;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace iSocket.Server
+namespace iSocketServer
 {
-    public class Server : IHostedService , IDisposable
+    class ServerLoop : IHostedService, IDisposable
     {
         #region IHostedService
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
@@ -41,16 +41,16 @@ namespace iSocket.Server
         #region IDisposable
         public void Dispose()
         {
-            if (MainListener != null && MainListener.Connected == true)
+            if (serverCore != null )
             {
-                MainListener.Disconnect(false);
-                MainListener = null;
+                serverCore.Dispose();
+                serverCore = null;
             }
         }
         #endregion
 
         private int PortNumber = 11000;
-        private Socket MainListener;
+        public ServerCore serverCore = new ServerCore();
 
         private async Task MainLoop()
         {
@@ -59,37 +59,31 @@ namespace iSocket.Server
             IPAddress ipAddress = IPAddress.Any;
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PortNumber);
 
-            // メイン接続のTCP/IPを作成
-            MainListener = new Socket(ipAddress.AddressFamily,
-                SocketType.Stream, ProtocolType.Tcp);
-
-            MainListener.Bind(localEndPoint);
-            MainListener.Listen(10);
+            serverCore.Start(localEndPoint, _stoppingCts);
 
             while (!_stoppingCts.IsCancellationRequested)
             {
-                Console.WriteLine("Waiting for a connection...");
-                Socket handler = await MainListener.AcceptAsync();
-                //クライアント情報を受信
-                var clientInfo = ClientInfoReceive(handler);
-                Console.WriteLine($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
+                int cnt = 0;
+                while (true)
+                {
 
-                // クライアントが接続したので、受付スレッドを開始する
-                var clientHub = new ClientHub(handler, clientInfo);
-                clientHub.Run();
-
-                ISocketClient.GetInstance().ClientHubs.Add(clientHub);
-
+                    if (cnt++ == 5)
+                    {
+                        try
+                        {
+                            serverCore.BroadCastNoReturn("Push", new byte[1] { 0xff });
+                            Console.WriteLine("Push");
+                        }catch(Exception ex)
+                        {
+                            Console.WriteLine(ex.ToString());
+                        }
+                        cnt = 0;
+                    }
+                    Thread.Sleep(1000);
+                }
             }
+
         }
 
-        private ClientInfo ClientInfoReceive(Socket handler)
-        {
-            byte[] bytes = new Byte[1024];
-            handler.Receive(bytes);
-            ClientInfo clientInfo = MessagePackSerializer.Deserialize<ClientInfo>(bytes);
-
-            return clientInfo;
-        }
     }
 }

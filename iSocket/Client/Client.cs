@@ -16,16 +16,17 @@ namespace iSocket.Client
         public ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
         private T Parent;
 
-        public void Connect(string ServerHost, int PortNumber,object parent)
+        public void Connect(string ServerHost, int PortNumber,string UserName,object parent)
         {
             Parent = (T)parent;
 
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
-            var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
-            IPEndPoint remoteEP = new IPEndPoint(host, PortNumber);
+            //IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
+            //var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+            IPAddress ipAddress = IPAddress.Parse("192.168.2.12");
+            IPEndPoint remoteEP = new IPEndPoint(ipAddress, PortNumber);
 
             // Create a TCP/IP  socket.  
-            serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            serverSocket = new Socket(ipAddress.AddressFamily,SocketType.Stream, ProtocolType.Tcp);
 
             try
             {
@@ -34,7 +35,7 @@ namespace iSocket.Client
                 Console.WriteLine("Socket connected to {0}",
                     serverSocket.RemoteEndPoint.ToString());
                 //接続出来たらクライアント情報を送る
-                SendClientInfo(serverSocket);
+                SendClientInfo(serverSocket, UserName);
 
                 clientReceiver.Run(serverSocket, Parent);
 
@@ -70,11 +71,11 @@ namespace iSocket.Client
             }
         }
 
-        private void SendClientInfo(Socket socket)
+        private void SendClientInfo(Socket socket,string UserName)
         {
             ClientInfo clientInfo = new ClientInfo();
             clientInfo.ClientID = Guid.NewGuid();
-            clientInfo.Name = "テスト";
+            clientInfo.Name = UserName;
 
             byte[] bytes = MessagePackSerializer.Serialize(clientInfo);
             socket.Send(bytes);
