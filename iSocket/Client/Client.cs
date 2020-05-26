@@ -12,8 +12,7 @@ namespace iSocket.Client
     public class Client : IDisposable
     {
         private Socket serverSocket;
-
-        private byte[] CommunicateButter = new byte[1024];
+        public ClientReceiver clientReceiver { get; } = new ClientReceiver();
 
         public void Connect(string ServerHost, int PortNumber)
         {
@@ -24,30 +23,16 @@ namespace iSocket.Client
             // Create a TCP/IP  socket.  
             Socket serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
-
             try
             {
                 serverSocket.Connect(remoteEP);
 
                 Console.WriteLine("Socket connected to {0}",
                     serverSocket.RemoteEndPoint.ToString());
+                //接続出来たらクライアント情報を送る
                 SendClientInfo(serverSocket);
 
-                while (true)
-                {
-                    // Encode the data string into a byte array.  
-                    byte[] msg = Encoding.ASCII.GetBytes(DateTime.Now.ToString());
-
-                    // Send the data through the socket.  
-                    int bytesSent = serverSocket.Send(msg);
-
-                    // Receive the response from the remote device.  
-                    int bytesRec = serverSocket.Receive(CommunicateButter);
-                    Console.WriteLine("{0}",
-                        Encoding.ASCII.GetString(CommunicateButter, 0, bytesRec));
-
-                    System.Threading.Thread.Sleep(2000);
-                }
+                clientReceiver.Run(serverSocket);
 
             }
             catch (ArgumentNullException ane)
@@ -86,6 +71,7 @@ namespace iSocket.Client
         {
             ClientInfo clientInfo = new ClientInfo();
             clientInfo.ClientID = Guid.NewGuid();
+            clientInfo.Name = "テスト";
 
             byte[] bytes = MessagePackSerializer.Serialize(clientInfo);
             socket.Send(bytes);

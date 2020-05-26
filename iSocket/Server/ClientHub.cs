@@ -1,4 +1,5 @@
 ﻿using iSocket.Model;
+using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
@@ -47,8 +48,9 @@ namespace iSocket.Server
                     string data = null;
                     int bytesRec = handler.Receive(bytes);
                     data = Encoding.ASCII.GetString(bytes, 0, bytesRec);
-                    byte[] msg = Encoding.ASCII.GetBytes($"Echo: {data}");
-                    handler.Send(msg);
+                    var packet = new ISocketPacket();
+                    packet.PackData = Encoding.ASCII.GetBytes($"Echo: {data}");
+                    handler.Send(MessagePackSerializer.Serialize(packet));
                 }
                 catch (Exception ex)
                 {

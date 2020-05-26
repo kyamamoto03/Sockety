@@ -71,7 +71,9 @@ namespace iSocket.Server
             {
                 Console.WriteLine("Waiting for a connection...");
                 Socket handler = await MainListener.AcceptAsync();
+                //クライアント情報を受信
                 var clientInfo = ClientInfoReceive(handler);
+                Console.WriteLine($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
 
                 // クライアントが接続したので、受付スレッドを開始する
                 var clientHub = new ClientHub(handler, clientInfo);

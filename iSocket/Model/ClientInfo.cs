@@ -11,8 +11,8 @@ namespace iSocket.Model
         [Key(0)]
         public Guid ClientID { get; set; }
         [Key(1)]
-        public string Name { get; private set; }
+        public string Name { get;  set; }
         [Key(2)]
-        public DateTime ConnectDate { get; private set; }
+        public DateTime ConnectDate { get; private set; } = DateTime.Now;
     }
 }
