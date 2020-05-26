@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\iSocket\iSocket.csproj" />
+    <ProjectReference Include="..\Share\Share.csproj" />
   </ItemGroup>
 
 </Project>

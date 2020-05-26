@@ -5,23 +5,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection.Emit;
 using System.Text;
 
 namespace iSocket.Client
 {
-    public class Client : IDisposable
+    public class Client<T> : IDisposable
     {
         private Socket serverSocket;
-        public ClientReceiver clientReceiver { get; } = new ClientReceiver();
+        public ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
+        private T Parent;
 
-        public void Connect(string ServerHost, int PortNumber)
+        public void Connect(string ServerHost, int PortNumber,object parent)
         {
+            Parent = (T)parent;
+
             IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
             var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
             IPEndPoint remoteEP = new IPEndPoint(host, PortNumber);
 
             // Create a TCP/IP  socket.  
-            Socket serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
             try
             {
@@ -32,7 +36,7 @@ namespace iSocket.Client
                 //接続出来たらクライアント情報を送る
                 SendClientInfo(serverSocket);
 
-                clientReceiver.Run(serverSocket);
+                clientReceiver.Run(serverSocket, Parent);
 
             }
             catch (ArgumentNullException ane)
@@ -47,7 +51,6 @@ namespace iSocket.Client
             {
                 Console.WriteLine("Unexpected exception : {0}", e.ToString());
             }
-
         }
 
         #region IDisposable

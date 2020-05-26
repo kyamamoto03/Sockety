@@ -10,6 +10,8 @@ namespace iSocket.Model
     public class ISocketPacket
     {
         [Key(0)]
+        public string MethodName { get; set; }
+        [Key(1)]
         public byte[] PackData { get; set; }
     }
 }

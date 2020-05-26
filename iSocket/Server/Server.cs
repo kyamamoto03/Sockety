@@ -51,7 +51,6 @@ namespace iSocket.Server
 
         private int PortNumber = 11000;
         private Socket MainListener;
-        private List<ClientHub> ClientThreads = new List<ClientHub>();
 
         private async Task MainLoop()
         {
@@ -79,7 +78,7 @@ namespace iSocket.Server
                 var clientHub = new ClientHub(handler, clientInfo);
                 clientHub.Run();
 
-                ClientThreads.Add(clientHub);
+                ISocketClient.GetInstance().ClientHubs.Add(clientHub);
 
             }
         }

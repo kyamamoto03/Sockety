@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace iSocket.Server
 {
@@ -35,12 +36,29 @@ namespace iSocket.Server
         {
             thread = new Thread(new ThreadStart(Process));
             thread.Start();
+
+            Task.Run(() =>
+            {
+                int cnt = 0;
+                while (true)
+                {
+
+                    if (cnt++ == 5)
+                    {
+                        var packet = new ISocketPacket();
+                        packet.MethodName = "Push";
+                        handler.Send(MessagePackSerializer.Serialize(packet));
+                        cnt = 0;
+                    }
+                    System.Threading.Thread.Sleep(1200);   
+                }
+
+            });
         }
 
         private void Process()
         {
             byte[] bytes = new Byte[1024];
-
             while (true)
             {
                 try
@@ -48,9 +66,12 @@ namespace iSocket.Server
                     string data = null;
                     int bytesRec = handler.Receive(bytes);
                     data = Encoding.ASCII.GetString(bytes, 0, bytesRec);
-                    var packet = new ISocketPacket();
-                    packet.PackData = Encoding.ASCII.GetBytes($"Echo: {data}");
-                    handler.Send(MessagePackSerializer.Serialize(packet));
+                    {
+                        var packet = new ISocketPacket();
+                        packet.MethodName = "Echo";
+                        packet.PackData = Encoding.ASCII.GetBytes($"Echo: {data}");
+                        handler.Send(MessagePackSerializer.Serialize(packet));
+                    }
                 }
                 catch (Exception ex)
                 {
