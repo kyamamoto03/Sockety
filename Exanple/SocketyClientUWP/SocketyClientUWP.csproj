@@ -155,7 +155,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sockety\Sockety.csproj">
+    <ProjectReference Include="..\..\Sockety\Sockety.csproj">
       <Project>{4683b55b-cced-4583-b05f-fb2c0c2cd81f}</Project>
       <Name>Sockety</Name>
     </ProjectReference>
