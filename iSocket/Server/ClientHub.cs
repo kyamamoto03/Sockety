@@ -1,4 +1,5 @@
-﻿using iSocket.Model;
+﻿using iSocket.Client;
+using iSocket.Model;
 using MessagePack;
 using System;
 using System.Collections.Generic;
@@ -10,12 +11,17 @@ using System.Threading.Tasks;
 
 namespace iSocket.Server
 {
-    internal class ClientHub<T> : IDisposable
+    public class ClientHub<T> : IDisposable
     {
         private Socket serverSocket = null;
         private Thread thread = null;
-        internal ClientInfo ClientInfo;
+        public ClientInfo ClientInfo;
         private T Parent;
+        /// <summary>
+        /// クライアントが切断時に発火
+        /// </summary>
+        public Action<ClientInfo> ConnectionReset;
+
 
         public ClientHub(Socket _handler, ClientInfo _clientInfo,T parent)
         {
@@ -77,8 +83,10 @@ namespace iSocket.Server
                 {
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
+                        //クライアント一覧から削除
+                        ISocketClient<T>.GetInstance().ClientHubs.Remove(this);
                         //通信切断
-                        //Task.Run(() => ConnectionReset?.Invoke());
+                        await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
 
                         //受信スレッド終了
                         return;

@@ -9,6 +9,6 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Loaded="Page_Loaded">
 
     <Grid>
-        <ListBox x:Name="listBox" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        <ListBox Name="listBox" HorizontalAlignment="Left" VerticalAlignment="Top"/>
     </Grid>
 </Page>

@@ -1,4 +1,5 @@
-﻿using iSocket.Model;
+﻿using iSocket.Client;
+using iSocket.Model;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -27,6 +28,10 @@ namespace iSocket.Server
 
         private Socket MainListener;
         private T Parent;
+        /// <summary>
+        /// クライアント切断時に発火
+        /// </summary>
+        public Action<ClientInfo> ConnectionReset;
 
         public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts,T parent)
         {
@@ -58,6 +63,7 @@ namespace iSocket.Server
 
                         // クライアントが接続したので、受付スレッドを開始する
                         var clientHub = new ClientHub<T>(handler, clientInfo,Parent);
+                        clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
                         ISocketClient<T>.GetInstance().ClientHubs.Add(clientHub);

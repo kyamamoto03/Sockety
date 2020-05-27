@@ -54,6 +54,11 @@ namespace iSocketServer
 
         private async Task MainLoop()
         {
+            serverCore.ConnectionReset = (x) =>
+            {
+                Console.WriteLine($"{x.Name}さんが切断されました");
+            };
+
             Console.WriteLine("MainLoop Start.");
             //すべてのIPで接続を受け付ける
             IPAddress ipAddress = IPAddress.Any;
