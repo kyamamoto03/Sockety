@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using iSocket.Client;
+using iSocket.Model;
 
 namespace iSocketClient
 {
@@ -12,7 +13,7 @@ namespace iSocketClient
             w.Start();
         }
     }
-    class Work 
+    class Work
     {
         public void UserJoin(string JoinUserName)
         {
@@ -54,6 +55,12 @@ namespace iSocketClient
             }
         }
 
+        public void UdpReceive(object obj)
+        {
+            string str = (string)obj;
+
+            Console.WriteLine($"UDP Receive:{obj}");
+        }
     }
 
 

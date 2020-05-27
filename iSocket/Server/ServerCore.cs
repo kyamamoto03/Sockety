@@ -70,7 +70,7 @@ namespace iSocket.Server
                         handler.Send(MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber));
 
                         //Udp HolePunching
-                        var ret = await UdpConnect(CanUDPConnectPort.UdpPortNumber);
+                        var ret = UdpConnect(CanUDPConnectPort.UdpPortNumber);
                         CanUDPConnectPort.PunchingSocket = ret.s;
                         CanUDPConnectPort.PunchingPoint = ret.p;
                         CanUDPConnectPort.IsConnect = true;
@@ -89,13 +89,17 @@ namespace iSocket.Server
             });
         }
 
-        internal async Task<(Socket s , IPEndPoint p)> UdpConnect(int PortNumber)
+        /// <summary>
+        /// UDP HolePunchingでUDP接続する
+        /// </summary>
+        /// <param name="PortNumber"></param>
+        /// <returns></returns>
+        internal (Socket s , IPEndPoint p) UdpConnect(int PortNumber)
         {
-            var WaitingServerAddress = IPAddress.Parse("192.168.2.12");//NetworkInterface.IPAddresses[0];
+            var WaitingServerAddress = IPAddress.Any;
             IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
 
-            Console.WriteLine($"Waiting Address:{WaitingServerAddress}");
-
+            //クライアントが設定してくるIPあどれっす
             string TargetAddress;
             //クライアントからのメッセージ(UDPホールパンチング）を待つ
             //groupEPにNATが変換したアドレス＋ポート番号は入ってくる
@@ -111,23 +115,11 @@ namespace iSocket.Server
 
             var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
-            PunchingSocket.Bind(new IPEndPoint(WaitingServerAddress, PortNumber));
+            PunchingSocket.Bind(new IPEndPoint(IPAddress.Parse(TargetAddress), PortNumber));
 
             var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
             return (PunchingSocket, PunchingPoint);
-            //while (true)
-            //{
-            //    //サーバが送信する文字列を作成
-            //    string echo_str = $"ServerSent: {DateTime.Now.ToString()}";
-            //    //Byte配列に変換
-            //    byte[] data = Encoding.UTF8.GetBytes(echo_str);
-            //    //サーバからクライアントへ送信
-            //    PunchingSocket.SendTo(data, SocketFlags.None, PunchingPoint);
-
-            //    await Task.Delay(1000);
-            //}
-
         }
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
@@ -142,6 +134,14 @@ namespace iSocket.Server
             return true;
         }
 
+        public void BroadCastUDPNoReturn(object data)
+        {
+            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+            {
+                x.SendUdp(data);
+            });
+
+        }
         public void BroadCastNoReturn(string ClientMethodName,object data)
         {
             ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>

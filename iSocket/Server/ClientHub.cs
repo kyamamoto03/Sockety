@@ -58,6 +58,21 @@ namespace iSocket.Server
             }
         }
 
+        internal void SendUdp(object data)
+        {
+            try
+            {
+                var packet = new ISocketPacket() { MethodName = "UdpReceive", PackData = data };
+                var bytes = MessagePackSerializer.Serialize(packet);
+                UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
+
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
         public void Run()
         {
             TcpThread = new Thread(new ThreadStart(ReceiveProcess));

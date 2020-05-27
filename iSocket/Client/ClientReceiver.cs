@@ -16,8 +16,8 @@ namespace iSocket.Client
         private Socket serverUdpSocket;
         private IPEndPoint serverUdpPort;
 
-        private Thread TcpReceiveThread = null;
-        private Thread UdpReceiveThread = null;
+        private Thread TcpReceiveThread;
+        private Thread UdpReceiveThread;
 
         private byte[] CommunicateButter = new byte[1024];
         /// <summary>
@@ -55,8 +55,8 @@ namespace iSocket.Client
             TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpReceiveThread.Start();
 
-            //UdpReceiveThread = new Thread(new ThreadStart(UdpReceiveProcess));
-            //UdpReceiveThread.Start();
+            UdpReceiveThread = new Thread(new ThreadStart(UdpReceiveProcess));
+            UdpReceiveThread.Start();
         }
 
         private string ServerCallMethodName = "";
@@ -81,6 +81,25 @@ namespace iSocket.Client
             RecieveSyncEvent.WaitOne();
 
             return ServerResponse;
+        }
+        private void UdpReceiveProcess()
+        {
+            var CommunicateBuffer = new byte[1024];
+
+            while(true)
+            {
+                try
+                {
+                    serverUdpSocket.Receive(CommunicateBuffer);
+                    var data = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateBuffer);
+
+                    InvokeMethod(data);
+                }
+                catch(Exception ex)
+                {
+                    throw ex;
+                }
+            }
         }
 
         /// <summary>

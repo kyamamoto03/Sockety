@@ -73,19 +73,20 @@ namespace iSocketServer
                 while (true)
                 {
 
-                    if (cnt++ == 5)
-                    {
-                        try
-                        {
-                            serverCore.BroadCastNoReturn("Push", null);
-                            Console.WriteLine("Push");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.ToString());
-                        }
-                        cnt = 0;
-                    }
+                    //if (cnt++ == 5)
+                    //{
+                    //    try
+                    //    {
+                    //        serverCore.BroadCastNoReturn("Push", null);
+                    //        Console.WriteLine("Push");
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        Console.WriteLine(ex.ToString());
+                    //    }
+                    //    cnt = 0;
+                    //}
+                    serverCore.BroadCastUDPNoReturn(DateTime.Now.ToString());
                     Thread.Sleep(1000);
                 }
             }
