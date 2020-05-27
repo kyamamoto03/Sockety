@@ -18,6 +18,7 @@ namespace iSocket.Server
         #region IDisposable
         public void Dispose()
         {
+            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x => x.Dispose());
             if (MainListener != null && MainListener.Connected == true)
             {
                 MainListener.Disconnect(false);
@@ -28,6 +29,7 @@ namespace iSocket.Server
 
         private Socket MainListener;
         private T Parent;
+        CancellationTokenSource stoppingCts;
         /// <summary>
         /// クライアント切断時に発火
         /// </summary>
@@ -36,6 +38,8 @@ namespace iSocket.Server
         public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts,T parent)
         {
             Parent = parent;
+            stoppingCts = _stoppingCts;
+
             // メイン接続のTCP/IPを作成
             MainListener = new Socket(localEndPoint.AddressFamily,
                 SocketType.Stream, ProtocolType.Tcp);
@@ -43,9 +47,10 @@ namespace iSocket.Server
             MainListener.Bind(localEndPoint);
             MainListener.Listen(10);
 
+
             Task.Run(async () => { 
                 //クライアント接続スレッド
-                while (!_stoppingCts.IsCancellationRequested)
+                while (!stoppingCts.IsCancellationRequested)
                 {
                     try
                     {
@@ -62,8 +67,20 @@ namespace iSocket.Server
                             Console.WriteLine($"ReConnect ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
                         }
 
+                        //Udp接続
+                        var CanUDPConnectPort = UserCommunicateService<T>.Get().Where(x => x.IsConnect == false).First();
+
+                        //Udpポート番号を送信
+                        handler.Send(MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber));
+
+                        //Udp HolePunching
+                        var ret = UdpConnect(CanUDPConnectPort.UdpPortNumber);
+                        CanUDPConnectPort.PunchingSocket = ret.s;
+                        CanUDPConnectPort.PunchingPoint = ret.p;
+                        CanUDPConnectPort.IsConnect = true;
+
                         // クライアントが接続したので、受付スレッドを開始する
-                        var clientHub = new ClientHub<T>(handler, clientInfo,Parent);
+                        var clientHub = new ClientHub<T>(handler, clientInfo, CanUDPConnectPort, stoppingCts,Parent);
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
@@ -74,6 +91,39 @@ namespace iSocket.Server
                     }
                 }
             });
+        }
+
+        /// <summary>
+        /// UDP HolePunchingでUDP接続する
+        /// </summary>
+        /// <param name="PortNumber"></param>
+        /// <returns></returns>
+        internal (Socket s , IPEndPoint p) UdpConnect(int PortNumber)
+        {
+            var WaitingServerAddress = IPAddress.Any;
+            IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
+
+            //クライアントが設定してくるIPあどれっす
+            string TargetAddress;
+            //クライアントからのメッセージ(UDPホールパンチング）を待つ
+            //groupEPにNATが変換したアドレス＋ポート番号は入ってくる
+            using (var udpClient = new UdpClient(PortNumber))
+            {
+                //Udp Hole Puchingをするために何かしらのデータを受信する(ここではクライアントが指定したサーバのアドレス)
+                TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
+            }
+
+            //NATで変換されたIPアドレスおよびポート番号
+            var ip = groupEP.Address.ToString();
+            var port = groupEP.Port;
+
+            var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
+            PunchingSocket.Bind(new IPEndPoint(IPAddress.Parse(TargetAddress), PortNumber));
+
+            var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+
+            return (PunchingSocket, PunchingPoint);
         }
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
@@ -88,6 +138,14 @@ namespace iSocket.Server
             return true;
         }
 
+        public void BroadCastUDPNoReturn(object data)
+        {
+            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+            {
+                x.SendUdp(data);
+            });
+
+        }
         public void BroadCastNoReturn(string ClientMethodName,object data)
         {
             ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>

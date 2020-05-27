@@ -45,7 +45,6 @@ namespace iSocketServer
             if (serverCore != null )
             {
                 serverCore.Dispose();
-                serverCore = null;
             }
         }
         #endregion
@@ -70,24 +69,22 @@ namespace iSocketServer
             while (!_stoppingCts.IsCancellationRequested)
             {
                 int cnt = 0;
-                while (true)
-                {
 
-                    if (cnt++ == 5)
+                if (cnt++ == 5)
+                {
+                    try
                     {
-                        try
-                        {
-                            serverCore.BroadCastNoReturn("Push", null);
-                            Console.WriteLine("Push");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.ToString());
-                        }
-                        cnt = 0;
+                        serverCore.BroadCastNoReturn("Push", null);
+                        Console.WriteLine("Push");
                     }
-                    Thread.Sleep(1000);
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.ToString());
+                    }
+                    cnt = 0;
                 }
+                serverCore.BroadCastUDPNoReturn(DateTime.Now.ToString());
+                Thread.Sleep(1000);
             }
 
         }
