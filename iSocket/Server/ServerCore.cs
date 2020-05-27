@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace iSocket.Server
 {
-    public class ServerCore : IDisposable
+    public class ServerCore<T> : IDisposable
     {
         #region IDisposable
         public void Dispose()
@@ -26,9 +26,11 @@ namespace iSocket.Server
         #endregion
 
         private Socket MainListener;
+        private T Parent;
 
-        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts)
+        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts,T parent)
         {
+            Parent = parent;
             // メイン接続のTCP/IPを作成
             MainListener = new Socket(localEndPoint.AddressFamily,
                 SocketType.Stream, ProtocolType.Tcp);
@@ -55,10 +57,10 @@ namespace iSocket.Server
                         }
 
                         // クライアントが接続したので、受付スレッドを開始する
-                        var clientHub = new ClientHub(handler, clientInfo);
+                        var clientHub = new ClientHub<T>(handler, clientInfo,Parent);
                         clientHub.Run();
 
-                        ISocketClient.GetInstance().ClientHubs.Add(clientHub);
+                        ISocketClient<T>.GetInstance().ClientHubs.Add(clientHub);
                     }catch(Exception ex)
                     {
                         Console.WriteLine(ex.ToString());
@@ -69,7 +71,7 @@ namespace iSocket.Server
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
         {
-            var clients = ISocketClient.GetInstance().ClientHubs;
+            var clients = ISocketClient<T>.GetInstance().ClientHubs;
 
             if (clients.Any(x => x.ClientInfo.ClientID == clientInfo.ClientID) == true)
             {
@@ -81,7 +83,7 @@ namespace iSocket.Server
 
         public void BroadCastNoReturn(string ClientMethodName,byte[] data)
         {
-            ISocketClient.GetInstance().ClientHubs.ForEach(x =>
+            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
                 x.SendNonReturn(ClientMethodName, data);
             });

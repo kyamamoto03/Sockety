@@ -4,14 +4,14 @@ using System.Text;
 
 namespace iSocket.Server
 {
-    internal class ISocketClient
+    internal class ISocketClient<T>
     {
-        private static ISocketClient _instance { get; set; }
-        public List<ClientHub> ClientHubs = new List<ClientHub>();
+        private static ISocketClient<T> _instance { get; set; }
+        public List<ClientHub<T>> ClientHubs = new List<ClientHub<T>>();
 
-        public static ISocketClient GetInstance()
+        public static ISocketClient<T> GetInstance()
         {
-            return _instance = _instance ?? new ISocketClient();
+            return _instance = _instance ?? new ISocketClient<T>();
         }
 
     }

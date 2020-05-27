@@ -44,6 +44,11 @@ namespace iSocketClient
             client.Connect("192.168.2.12", 11000,"ConsoleApp",this);
             while(true)
             {
+                var str = DateTime.Now.ToString();
+                var ret = client.clientReceiver.Send("Echo", Encoding.ASCII.GetBytes(str));
+                var retstr = Encoding.ASCII.GetString(ret, 0, ret.Length);
+                Console.WriteLine(retstr);
+
                 System.Threading.Thread.Sleep(2000);
             }
         }

@@ -57,7 +57,7 @@ namespace iSocket.Client
             {
                 ServerCallMethodName = serverMethodName;
             }
-            ISocketPacket packet = new ISocketPacket { PackData = data };
+            ISocketPacket packet = new ISocketPacket {MethodName = serverMethodName, PackData = data };
             RecieveSyncEvent.Reset();
             serverSocket.Send(MessagePackSerializer.Serialize(packet));
             RecieveSyncEvent.WaitOne();
@@ -66,7 +66,7 @@ namespace iSocket.Client
         }
 
         /// <summary>
-        /// サーバの受信を一括して行う
+        /// 受信を一括して行う
         /// </summary>
         private void ReceiveProcess()
         {

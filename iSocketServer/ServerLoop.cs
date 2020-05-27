@@ -50,7 +50,7 @@ namespace iSocketServer
         #endregion
 
         private int PortNumber = 11000;
-        public ServerCore serverCore = new ServerCore();
+        public ServerCore<ServerLoop> serverCore = new ServerCore<ServerLoop>();
 
         private async Task MainLoop()
         {
@@ -59,7 +59,7 @@ namespace iSocketServer
             IPAddress ipAddress = IPAddress.Any;
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PortNumber);
 
-            serverCore.Start(localEndPoint, _stoppingCts);
+            serverCore.Start(localEndPoint, _stoppingCts,this);
 
             while (!_stoppingCts.IsCancellationRequested)
             {
@@ -73,7 +73,8 @@ namespace iSocketServer
                         {
                             serverCore.BroadCastNoReturn("Push", new byte[1] { 0xff });
                             Console.WriteLine("Push");
-                        }catch(Exception ex)
+                        }
+                        catch (Exception ex)
                         {
                             Console.WriteLine(ex.ToString());
                         }
@@ -85,5 +86,12 @@ namespace iSocketServer
 
         }
 
+        public byte[] Echo(byte[] a)
+        {
+            string data = null;
+
+            data = Encoding.ASCII.GetString(a, 0, a.Length);
+            return Encoding.ASCII.GetBytes($"Echo: {data}");
+        }
     }
 }
