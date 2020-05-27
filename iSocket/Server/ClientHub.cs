@@ -41,7 +41,7 @@ namespace iSocket.Server
         }
 
        
-        internal void SendNonReturn(string ClientMethodName,byte[] data)
+        internal void SendNonReturn(string ClientMethodName,object data)
         {
             try
             {

@@ -14,12 +14,12 @@ namespace iSocketClient
     }
     class Work 
     {
-        public void UserJoin(byte[] packet)
+        public void UserJoin(string JoinUserName)
         {
-            Console.WriteLine("{0}",
-                    System.Text.Encoding.ASCII.GetString(packet, 0, packet.Length));
+            Console.WriteLine($"Join: {JoinUserName}");
         }
-        public void Push(byte[] a)
+
+        public void Push()
         {
             Console.WriteLine("Push!");
         }
@@ -42,11 +42,12 @@ namespace iSocketClient
             };
 
             client.Connect("192.168.2.12", 11000,"ConsoleApp",this);
-            while(true)
+            client.clientReceiver.Send("Join", DateTime.Now.ToString());
+
+            while (true)
             {
-                var ret = client.clientReceiver.Send("Echo", DateTime.Now.ToString());
-                var retstr = (string)ret;
-                Console.WriteLine(retstr);
+                var ret = (string)client.clientReceiver.Send("Echo", DateTime.Now.ToString());
+                Console.WriteLine(ret);
 
                 System.Threading.Thread.Sleep(2000);
             }

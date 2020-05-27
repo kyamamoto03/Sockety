@@ -115,7 +115,14 @@ namespace iSocket.Client
             {
                 throw new Exception("not found Method");
             }
-            Task.Run(() => method.Invoke(Parent, new object[] { packet.PackData }));
+            if (packet.PackData != null)
+            {
+                Task.Run(() => method.Invoke(Parent, new object[] { packet.PackData }));
+            }
+            else
+            {
+                Task.Run(() => method.Invoke(Parent, null));
+            }
         }
     }
 }

@@ -88,7 +88,7 @@ namespace iSocket.Server
             return true;
         }
 
-        public void BroadCastNoReturn(string ClientMethodName,byte[] data)
+        public void BroadCastNoReturn(string ClientMethodName,object data)
         {
             ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {

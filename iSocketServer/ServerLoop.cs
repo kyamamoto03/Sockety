@@ -1,6 +1,7 @@
 ﻿using iSocket.Model;
 using iSocket.Server;
 using MessagePack;
+using MessagePack.Resolvers;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
@@ -76,7 +77,7 @@ namespace iSocketServer
                     {
                         try
                         {
-                            serverCore.BroadCastNoReturn("Push", new byte[1] { 0xff });
+                            serverCore.BroadCastNoReturn("Push", null);
                             Console.WriteLine("Push");
                         }
                         catch (Exception ex)
@@ -95,6 +96,12 @@ namespace iSocketServer
         {
             string data = (string)obj;
             return $"ServerEcho {data}";
+        }
+
+        public object Join(string UserJoin)
+        {
+            serverCore.BroadCastNoReturn("UserJoin", UserJoin);
+            return null;
         }
     }
 }
