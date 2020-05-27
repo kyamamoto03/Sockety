@@ -20,13 +20,12 @@ namespace iSocket.Client
         {
             Parent = (T)parent;
 
-            //IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
-            //var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
-            IPAddress ipAddress = IPAddress.Parse("192.168.2.12");
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, PortNumber);
+            IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
+            var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+            IPEndPoint remoteEP = new IPEndPoint(host, PortNumber);
 
             // Create a TCP/IP  socket.  
-            serverSocket = new Socket(ipAddress.AddressFamily,SocketType.Stream, ProtocolType.Tcp);
+            serverSocket = new Socket(host.AddressFamily,SocketType.Stream, ProtocolType.Tcp);
 
             try
             {
