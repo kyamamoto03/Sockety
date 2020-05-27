@@ -56,32 +56,6 @@ namespace iSocket.Server
 
         }
 
-        //private void Process()
-        //{
-        //    byte[] bytes = new Byte[1024];
-        //    while (true)
-        //    {
-        //        try
-        //        {
-        //            string data = null;
-        //            int bytesRec = handler.Receive(bytes);
-        //            data = Encoding.ASCII.GetString(bytes, 0, bytesRec);
-        //            {
-        //                var packet = new ISocketPacket();
-        //                packet.MethodName = "Echo";
-        //                packet.PackData = Encoding.ASCII.GetBytes($"Echo: {data}");
-        //                handler.Send(MessagePackSerializer.Serialize(packet));
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Console.WriteLine(ex.ToString());
-        //            break;
-        //        }
-        //    }
-
-        //}
-
         /// <summary>
         /// 受信を一括して行う
         /// </summary>
