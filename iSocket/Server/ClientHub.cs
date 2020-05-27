@@ -14,7 +14,7 @@ namespace iSocket.Server
     {
         private Socket handler = null;
         private Thread thread = null;
-        private ClientInfo ClientInfo;
+        internal ClientInfo ClientInfo;
 
         public ClientHub(Socket _handler, ClientInfo _clientInfo)
         {

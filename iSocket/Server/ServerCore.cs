@@ -3,6 +3,7 @@ using MessagePack;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -44,7 +45,14 @@ namespace iSocket.Server
                         Socket handler = await MainListener.AcceptAsync();
                         //クライアント情報を受信
                         var clientInfo = ClientInfoReceive(handler);
-                        Console.WriteLine($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
+                        if (ClientInfoManagement(clientInfo) == false)
+                        {
+                            Console.WriteLine($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"ReConnect ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
+                        }
 
                         // クライアントが接続したので、受付スレッドを開始する
                         var clientHub = new ClientHub(handler, clientInfo);
@@ -57,6 +65,18 @@ namespace iSocket.Server
                     }
                 }
             });
+        }
+
+        private bool ClientInfoManagement(ClientInfo clientInfo)
+        {
+            var clients = ISocketClient.GetInstance().ClientHubs;
+
+            if (clients.Any(x => x.ClientInfo.ClientID == clientInfo.ClientID) == true)
+            {
+                //すでにClientIDがあるので再接続
+                return false;
+            }
+            return true;
         }
 
         public void BroadCastNoReturn(string ClientMethodName,byte[] data)

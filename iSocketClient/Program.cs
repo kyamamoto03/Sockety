@@ -28,6 +28,19 @@ namespace iSocketClient
         {
             var client = new Client<Work>();
 
+
+            ///再接続処理
+            client.ConnectionReset = () =>
+            {
+                while (true)
+                {
+                    if (client.ReConnect() == true)
+                    {
+                        return;
+                    }
+                }
+            };
+
             client.Connect("192.168.2.12", 11000,"ConsoleApp",this);
             while(true)
             {

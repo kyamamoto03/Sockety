@@ -15,17 +15,27 @@ namespace iSocket.Client
         private Thread thread = null;
 
         private byte[] CommunicateButter = new byte[1024];
+        /// <summary>
+        /// 通信が切断時に発火
+        /// </summary>
+        public Action ConnectionReset;
 
         #region IDisposable
         public void Dispose()
+        {
+            AbortReceiveProcess();
+        }
+        #endregion
+
+        public void AbortReceiveProcess()
         {
             if (thread != null)
             {
                 thread.Abort();
                 thread = null;
             }
+
         }
-        #endregion
 
         private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
@@ -55,26 +65,43 @@ namespace iSocket.Client
             return ServerResponse;
         }
 
+        /// <summary>
+        /// サーバの受信を一括して行う
+        /// </summary>
         private void ReceiveProcess()
         {
             while (true)
             {
-                // Receive the response from the remote device.  
-                int bytesRec = serverSocket.Receive(CommunicateButter);
-                var packet = MessagePack.MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateButter);
-                lock(RecieveSyncEvent)
+                try
                 {
-                    if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                    int bytesRec = serverSocket.Receive(CommunicateButter);
+                    var packet = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateButter);
+                    lock (RecieveSyncEvent)
                     {
-                        ServerResponse = packet.PackData;
-                        RecieveSyncEvent.Set();
+                        if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                        {
+                            ServerResponse = packet.PackData;
+                            RecieveSyncEvent.Set();
+                        }
+                        else
+                        {
+                            InvokeMethod(packet);
+                        }
                     }
-                    else
+                }catch(SocketException ex)
+                { 
+                    if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
-                        InvokeMethod(packet);
-                    }
-                }
+                        //通信切断
+                        Task.Run(() => ConnectionReset?.Invoke());
 
+                        //受信スレッド終了
+                        return;
+                    }
+                }catch(Exception ex)
+                {
+                    Console.WriteLine(ex.ToString());
+                }
                 Thread.Sleep(10);
             }
         }
