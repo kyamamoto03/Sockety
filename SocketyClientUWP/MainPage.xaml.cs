@@ -1,4 +1,4 @@
-﻿using iSocket.Client;
+﻿using Sockety.Client;
 using System;
 using System.Collections.Generic;
 using System.IO;

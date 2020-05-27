@@ -1,5 +1,5 @@
-﻿using iSocket.Client;
-using iSocket.Model;
+﻿using Sockety.Client;
+using Sockety.Model;
 using MessagePack;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -11,14 +11,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace iSocket.Server
+namespace Sockety.Server
 {
     public class ServerCore<T> : IDisposable
     {
         #region IDisposable
         public void Dispose()
         {
-            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x => x.Dispose());
+            SocketClient<T>.GetInstance().ClientHubs.ForEach(x => x.Dispose());
             if (MainListener != null && MainListener.Connected == true)
             {
                 MainListener.Disconnect(false);
@@ -84,7 +84,7 @@ namespace iSocket.Server
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
-                        ISocketClient<T>.GetInstance().ClientHubs.Add(clientHub);
+                        SocketClient<T>.GetInstance().ClientHubs.Add(clientHub);
                     }catch(Exception ex)
                     {
                         Console.WriteLine(ex.ToString());
@@ -128,7 +128,7 @@ namespace iSocket.Server
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
         {
-            var clients = ISocketClient<T>.GetInstance().ClientHubs;
+            var clients = SocketClient<T>.GetInstance().ClientHubs;
 
             if (clients.Any(x => x.ClientInfo.ClientID == clientInfo.ClientID) == true)
             {
@@ -140,7 +140,7 @@ namespace iSocket.Server
 
         public void BroadCastUDPNoReturn(object data)
         {
-            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+            SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
                 x.SendUdp(data);
             });
@@ -148,7 +148,7 @@ namespace iSocket.Server
         }
         public void BroadCastNoReturn(string ClientMethodName,object data)
         {
-            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+            SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
                 x.SendNonReturn(ClientMethodName, data);
             });

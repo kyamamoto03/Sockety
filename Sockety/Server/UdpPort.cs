@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
-namespace iSocket.Server
+namespace Sockety.Server
 {
     public class UdpPort<T>
     {

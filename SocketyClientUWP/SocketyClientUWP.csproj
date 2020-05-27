@@ -155,9 +155,9 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\iSocket\iSocket.csproj">
+    <ProjectReference Include="..\Sockety\Sockety.csproj">
       <Project>{4683b55b-cced-4583-b05f-fb2c0c2cd81f}</Project>
-      <Name>iSocket</Name>
+      <Name>Sockety</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">

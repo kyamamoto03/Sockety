@@ -1,4 +1,4 @@
-﻿using iSocket.Model;
+﻿using Sockety.Model;
 using MessagePack;
 using System;
 using System.Collections.Generic;
@@ -8,9 +8,9 @@ using System.Net.Sockets;
 using System.Reflection.Emit;
 using System.Text;
 
-namespace iSocket.Client
+namespace Sockety.Client
 {
-    public class Client<T> : IDisposable where T:ISocket 
+    public class Client<T> : IDisposable where T:IService 
     {
         private Socket serverSocket;
         public ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();

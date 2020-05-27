@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\iSocket\iSocket.csproj" />
+    <ProjectReference Include="..\iSocket\Sockety.csproj" />
   </ItemGroup>
 
 </Project>

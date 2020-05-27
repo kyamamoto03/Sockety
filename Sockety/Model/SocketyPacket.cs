@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Text;
 
-namespace iSocket.Model
+namespace Sockety.Model
 {
     [MessagePackObject]
-    public class ISocketPacket
+    public class SocketyPacket
     {
         [Key(0)]
         public string MethodName { get; set; }

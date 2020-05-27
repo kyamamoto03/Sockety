@@ -1,4 +1,4 @@
-﻿using iSocket.Model;
+﻿using Sockety.Model;
 using MessagePack;
 using System;
 using System.Collections.Generic;
@@ -8,9 +8,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace iSocket.Client
+namespace Sockety.Client
 {
-    public class ClientReceiver<T>: IDisposable where T: ISocket
+    public class ClientReceiver<T>: IDisposable where T: IService
     {
         private Socket serverSocket = null;
         private Socket serverUdpSocket;
@@ -75,7 +75,7 @@ namespace iSocket.Client
             {
                 ServerCallMethodName = serverMethodName;
             }
-            ISocketPacket packet = new ISocketPacket {MethodName = serverMethodName, PackData = data };
+            SocketyPacket packet = new SocketyPacket {MethodName = serverMethodName, PackData = data };
             RecieveSyncEvent.Reset();
             serverSocket.Send(MessagePackSerializer.Serialize(packet));
             RecieveSyncEvent.WaitOne();
@@ -91,7 +91,7 @@ namespace iSocket.Client
                 try
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
-                    var data = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateBuffer);
+                    var data = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateBuffer);
                     Parent.UdpReceive(data.PackData);
 
                 }
@@ -112,7 +112,7 @@ namespace iSocket.Client
                 try
                 {
                     int bytesRec = serverSocket.Receive(CommunicateButter);
-                    var packet = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateButter);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
                     lock (RecieveSyncEvent)
                     {
                         if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
@@ -143,7 +143,7 @@ namespace iSocket.Client
             }
         }
 
-        private void InvokeMethod(ISocketPacket packet)
+        private void InvokeMethod(SocketyPacket packet)
         {
             Type t = Parent.GetType();
             var method = t.GetMethod(packet.MethodName);

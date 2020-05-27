@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using iSocket.Server;
+using Sockety.Server;
 
 namespace iSocketServer
 {

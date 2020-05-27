@@ -1,5 +1,5 @@
-﻿using iSocket.Client;
-using iSocket.Model;
+﻿using Sockety.Client;
+using Sockety.Model;
 using MessagePack;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace iSocket.Server
+namespace Sockety.Server
 {
     public class ClientHub<T> : IDisposable
     {
@@ -53,7 +53,7 @@ namespace iSocket.Server
         {
             try
             {
-                var packet = new ISocketPacket() { MethodName = ClientMethodName, PackData = data };
+                var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                 var d = MessagePackSerializer.Serialize(packet);
                 serverSocket.Send(d);
             }catch(Exception ex)
@@ -66,7 +66,7 @@ namespace iSocket.Server
         {
             try
             {
-                var packet = new ISocketPacket() { MethodName = "UdpReceive", PackData = data };
+                var packet = new SocketyPacket() { MethodName = "UdpReceive", PackData = data };
                 var bytes = MessagePackSerializer.Serialize(packet);
                 UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
 
@@ -124,7 +124,7 @@ namespace iSocket.Server
                 try
                 {
                     int bytesRec = serverSocket.Receive(CommunicateButter);
-                    var packet = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateButter);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
 
                     //メソッドの戻り値を詰め替える
                     packet.PackData = await InvokeMethodAsync(packet);
@@ -136,7 +136,7 @@ namespace iSocket.Server
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
                         //クライアント一覧から削除
-                        ISocketClient<T>.GetInstance().ClientHubs.Remove(this);
+                        SocketClient<T>.GetInstance().ClientHubs.Remove(this);
                         //通信切断
                         await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
 
@@ -152,7 +152,7 @@ namespace iSocket.Server
             }
         }
 
-        private async Task<object> InvokeMethodAsync(ISocketPacket packet)
+        private async Task<object> InvokeMethodAsync(SocketyPacket packet)
         {
             Type t = Parent.GetType();
             var method = t.GetMethod(packet.MethodName);

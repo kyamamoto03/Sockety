@@ -1,5 +1,5 @@
-﻿using iSocket.Model;
-using iSocket.Server;
+﻿using Sockety.Model;
+using Sockety.Server;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.Extensions.Hosting;
@@ -66,9 +66,9 @@ namespace iSocketServer
 
             serverCore.Start(localEndPoint, _stoppingCts,this);
 
+            int cnt = 0;
             while (!_stoppingCts.IsCancellationRequested)
             {
-                int cnt = 0;
 
                 if (cnt++ == 5)
                 {

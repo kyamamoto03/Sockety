@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\iSocket\iSocket.csproj" />
-    <ProjectReference Include="..\Share\Share.csproj" />
+    <ProjectReference Include="..\iSocket\Sockety.csproj" />
+    <ProjectReference Include="..\Sockety\Sockety.csproj" />
   </ItemGroup>
 
 </Project>

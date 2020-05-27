@@ -4,7 +4,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
 
-namespace iSocket.Server
+namespace Sockety.Server
 {
     internal class NetworkInterface
     {

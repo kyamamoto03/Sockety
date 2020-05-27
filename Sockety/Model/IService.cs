@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace iSocket.Model
+namespace Sockety.Model
 {
-    public interface ISocket
+    public interface IService
     {
         void UdpReceive(object obj);
     }

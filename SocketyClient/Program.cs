@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
-using iSocket.Client;
-using iSocket.Model;
+using Sockety.Client;
+using Sockety.Model;
 
 namespace iSocketClient
 {
@@ -13,7 +13,7 @@ namespace iSocketClient
             w.Start();
         }
     }
-    class Work : ISocket
+    class Work : IService
     {
         public void UserJoin(string JoinUserName)
         {

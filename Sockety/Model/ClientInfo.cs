@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using MessagePack;
 
-namespace iSocket.Model
+namespace Sockety.Model
 {
     [MessagePackObject]
     public class ClientInfo
