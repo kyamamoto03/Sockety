@@ -12,6 +12,6 @@ namespace iSocket.Model
         [Key(0)]
         public string MethodName { get; set; }
         [Key(1)]
-        public byte[] PackData { get; set; }
+        public object PackData { get; set; }
     }
 }

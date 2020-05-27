@@ -44,6 +44,7 @@ namespace iSocket.Server
             MainListener.Listen(10);
 
             Task.Run(async () => { 
+                //クライアント接続スレッド
                 while (!_stoppingCts.IsCancellationRequested)
                 {
                     try

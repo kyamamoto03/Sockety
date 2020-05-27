@@ -100,7 +100,7 @@ namespace iSocket.Server
             }
         }
 
-        private async Task<byte[]> InvokeMethodAsync(ISocketPacket packet)
+        private async Task<object> InvokeMethodAsync(ISocketPacket packet)
         {
             Type t = Parent.GetType();
             var method = t.GetMethod(packet.MethodName);
@@ -109,7 +109,7 @@ namespace iSocket.Server
             {
                 throw new Exception("not found Method");
             }
-            byte[] ret = (byte[])await Task.Run(() => method.Invoke(Parent, new object[] { packet.PackData }));
+            object ret = (object)await Task.Run(() => method.Invoke(Parent, new object[] { packet.PackData }));
 
             return ret;
         }

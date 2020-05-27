@@ -52,7 +52,7 @@ namespace iSocketServer
         private int PortNumber = 11000;
         public ServerCore<ServerLoop> serverCore = new ServerCore<ServerLoop>();
 
-        private void MainLoop()
+        private async Task MainLoop()
         {
             serverCore.ConnectionReset = (x) =>
             {
@@ -91,12 +91,10 @@ namespace iSocketServer
 
         }
 
-        public byte[] Echo(byte[] a)
+        public object Echo(object obj)
         {
-            string data;
-
-            data = Encoding.ASCII.GetString(a, 0, a.Length);
-            return Encoding.ASCII.GetBytes($"Echo: {data}");
+            string data = (string)obj;
+            return $"ServerEcho {data}";
         }
     }
 }

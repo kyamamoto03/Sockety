@@ -49,9 +49,9 @@ namespace iSocket.Client
         }
 
         private string ServerCallMethodName = "";
-        private byte[] ServerResponse;
+        private object ServerResponse;
 
-        public byte[] Send(string serverMethodName,byte[] data)
+        public object Send(string serverMethodName,object data)
         {
             lock (ServerCallMethodName)
             {
