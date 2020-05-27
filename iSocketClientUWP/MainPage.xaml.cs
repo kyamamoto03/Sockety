@@ -55,7 +55,7 @@ namespace iSocketClientUWP
         }
         public void Push(byte[] a)
         {
-            Task.Run(async () => await Parent.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
+            Task.Run(async () => await Parent.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,  () =>
             {
                 Parent.e();
             }
