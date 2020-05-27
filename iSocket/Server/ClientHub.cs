@@ -18,7 +18,7 @@ namespace iSocket.Server
         private Thread UdpThread;
         public ClientInfo ClientInfo;
         private T Parent;
-
+        CancellationTokenSource stoppingCts;
         private UdpPort<T> UdpPort;
         /// <summary>
         /// クライアントが切断時に発火
@@ -26,18 +26,22 @@ namespace iSocket.Server
         public Action<ClientInfo> ConnectionReset;
 
 
-        public ClientHub(Socket _handler, ClientInfo _clientInfo, UdpPort<T> udpPort,T parent)
+        public ClientHub(Socket _handler, ClientInfo _clientInfo, UdpPort<T> udpPort, CancellationTokenSource _stoppingCts,T parent)
         {
             this.Parent = parent;
             this.serverSocket = _handler;
             this.ClientInfo = _clientInfo;
             this.UdpPort = udpPort;
+            this.stoppingCts = _stoppingCts;
         }
 
         public void Dispose()
         {
             if (serverSocket != null)
             {
+                TcpThread.Abort();
+                UdpThread.Abort();
+
                 serverSocket.Shutdown(SocketShutdown.Both);
                 serverSocket.Close();
                 serverSocket = null;
@@ -69,7 +73,7 @@ namespace iSocket.Server
             }
             catch (Exception ex)
             {
-
+                throw ex;
             }
         }
 
@@ -85,12 +89,27 @@ namespace iSocket.Server
         private void UdpReceiveProcess()
         {
             byte[] CommunicateButter = new byte[1024];
+            UdpPort.PunchingSocket.ReceiveTimeout = 5000;
             while (true)
             {
-                int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
-                var str = MessagePackSerializer.Deserialize<string>(CommunicateButter);
+                try
+                {
+                    int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
+                    var str = MessagePackSerializer.Deserialize<string>(CommunicateButter);
 
-                Console.WriteLine($"UDP:{str}");
+                    Console.WriteLine($"UDP:{str}");
+                }
+                catch (SocketException ex)
+                {
+                    if (ex.SocketErrorCode == SocketError.TimedOut && stoppingCts.IsCancellationRequested == true)
+                    {
+                        //終了フラグが立ってるので、スレッドを終了する
+                        return;
+                    }
+                }catch(Exception ex)
+                {
+                    throw ex;
+                }
             }
         }
 

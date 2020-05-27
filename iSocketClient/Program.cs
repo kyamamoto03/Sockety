@@ -13,7 +13,7 @@ namespace iSocketClient
             w.Start();
         }
     }
-    class Work
+    class Work : ISocket
     {
         public void UserJoin(string JoinUserName)
         {

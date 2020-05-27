@@ -18,6 +18,7 @@ namespace iSocket.Server
         #region IDisposable
         public void Dispose()
         {
+            ISocketClient<T>.GetInstance().ClientHubs.ForEach(x => x.Dispose());
             if (MainListener != null && MainListener.Connected == true)
             {
                 MainListener.Disconnect(false);
@@ -28,6 +29,7 @@ namespace iSocket.Server
 
         private Socket MainListener;
         private T Parent;
+        CancellationTokenSource stoppingCts;
         /// <summary>
         /// クライアント切断時に発火
         /// </summary>
@@ -36,6 +38,8 @@ namespace iSocket.Server
         public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts,T parent)
         {
             Parent = parent;
+            stoppingCts = _stoppingCts;
+
             // メイン接続のTCP/IPを作成
             MainListener = new Socket(localEndPoint.AddressFamily,
                 SocketType.Stream, ProtocolType.Tcp);
@@ -46,7 +50,7 @@ namespace iSocket.Server
 
             Task.Run(async () => { 
                 //クライアント接続スレッド
-                while (!_stoppingCts.IsCancellationRequested)
+                while (!stoppingCts.IsCancellationRequested)
                 {
                     try
                     {
@@ -76,7 +80,7 @@ namespace iSocket.Server
                         CanUDPConnectPort.IsConnect = true;
 
                         // クライアントが接続したので、受付スレッドを開始する
-                        var clientHub = new ClientHub<T>(handler, clientInfo, CanUDPConnectPort,Parent);
+                        var clientHub = new ClientHub<T>(handler, clientInfo, CanUDPConnectPort, stoppingCts,Parent);
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 

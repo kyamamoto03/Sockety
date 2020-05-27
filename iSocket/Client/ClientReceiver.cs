@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace iSocket.Client
 {
-    public class ClientReceiver<T> : IDisposable
+    public class ClientReceiver<T>: IDisposable where T: ISocket
     {
         private Socket serverSocket = null;
         private Socket serverUdpSocket;
@@ -92,8 +92,8 @@ namespace iSocket.Client
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
                     var data = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateBuffer);
+                    Parent.UdpReceive(data.PackData);
 
-                    InvokeMethod(data);
                 }
                 catch(Exception ex)
                 {

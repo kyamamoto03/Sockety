@@ -10,7 +10,7 @@ using System.Text;
 
 namespace iSocket.Client
 {
-    public class Client<T> : IDisposable
+    public class Client<T> : IDisposable where T:ISocket 
     {
         private Socket serverSocket;
         public ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
