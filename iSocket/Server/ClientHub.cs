@@ -16,7 +16,6 @@ namespace iSocket.Server
         private Thread thread = null;
         internal ClientInfo ClientInfo;
         private T Parent;
-        private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
         public ClientHub(Socket _handler, ClientInfo _clientInfo,T parent)
         {
@@ -59,7 +58,7 @@ namespace iSocket.Server
         /// <summary>
         /// 受信を一括して行う
         /// </summary>
-        private void ReceiveProcess()
+        private async void ReceiveProcess()
         {
             byte[] CommunicateButter = new byte[1024];
             while (true)
@@ -68,13 +67,11 @@ namespace iSocket.Server
                 {
                     int bytesRec = serverSocket.Receive(CommunicateButter);
                     var packet = MessagePackSerializer.Deserialize<ISocketPacket>(CommunicateButter);
-                    lock (RecieveSyncEvent)
-                    {
-                        //メソッドの戻り値を詰め替える
-                        packet.PackData = InvokeMethod(packet);
-                        //送り返す
-                        serverSocket.Send(MessagePackSerializer.Serialize(packet));
-                    }
+
+                    //メソッドの戻り値を詰め替える
+                    packet.PackData = await InvokeMethodAsync(packet);
+                    //送り返す
+                    serverSocket.Send(MessagePackSerializer.Serialize(packet));
                 }
                 catch (SocketException ex)
                 {
@@ -95,7 +92,7 @@ namespace iSocket.Server
             }
         }
 
-        private byte[] InvokeMethod(ISocketPacket packet)
+        private async Task<byte[]> InvokeMethodAsync(ISocketPacket packet)
         {
             Type t = Parent.GetType();
             var method = t.GetMethod(packet.MethodName);
@@ -104,7 +101,7 @@ namespace iSocket.Server
             {
                 throw new Exception("not found Method");
             }
-            byte[] ret = (byte[])method.Invoke(Parent, new object[] { packet.PackData });
+            byte[] ret = (byte[])await Task.Run(() => method.Invoke(Parent, new object[] { packet.PackData }));
 
             return ret;
         }
