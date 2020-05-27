@@ -2,6 +2,7 @@
 using MessagePack;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -12,7 +13,11 @@ namespace iSocket.Client
     public class ClientReceiver<T> : IDisposable
     {
         private Socket serverSocket = null;
-        private Thread thread = null;
+        private Socket serverUdpSocket;
+        private IPEndPoint serverUdpPort;
+
+        private Thread TcpReceiveThread = null;
+        private Thread UdpReceiveThread = null;
 
         private byte[] CommunicateButter = new byte[1024];
         /// <summary>
@@ -29,10 +34,10 @@ namespace iSocket.Client
 
         public void AbortReceiveProcess()
         {
-            if (thread != null)
+            if (TcpReceiveThread != null)
             {
-                thread.Abort();
-                thread = null;
+                TcpReceiveThread.Abort();
+                TcpReceiveThread = null;
             }
 
         }
@@ -40,16 +45,29 @@ namespace iSocket.Client
         private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
         private T Parent;
-        public void Run(Socket handler, T parent)
+        public void Run(Socket handler,Socket UdpSocket,IPEndPoint UdpEndPort, T parent)
         {
             Parent = parent;
             serverSocket = handler;
-            thread = new Thread(new ThreadStart(ReceiveProcess));
-            thread.Start();
+            serverUdpSocket = UdpSocket;
+            serverUdpPort = UdpEndPort;
+
+            TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
+            TcpReceiveThread.Start();
+
+            //UdpReceiveThread = new Thread(new ThreadStart(UdpReceiveProcess));
+            //UdpReceiveThread.Start();
         }
 
         private string ServerCallMethodName = "";
         private object ServerResponse;
+
+        public void UdpSend(object data)
+        {
+            var bytes = MessagePackSerializer.Serialize(data);
+
+            serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
+        }
 
         public object Send(string serverMethodName,object data)
         {

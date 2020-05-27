@@ -43,7 +43,17 @@ namespace iSocket.Client
                 //接続出来たらクライアント情報を送る
                 SendClientInfo(serverSocket, clientInfo);
 
-                clientReceiver.Run(serverSocket, Parent);
+                byte[] ddd = new byte[1024];
+                serverSocket.Receive(ddd);
+                int port = MessagePackSerializer.Deserialize<int>(ddd);
+
+                var UdpInfo = ConnectUdp(ServerHost, port);
+
+                //Udp接続
+                clientReceiver.Run(handler:  serverSocket,
+                    UdpSocket: UdpInfo.socket,
+                    UdpEndPort: UdpInfo.point,
+                    Parent);
 
             }
             catch (ArgumentNullException ane)
@@ -60,6 +70,17 @@ namespace iSocket.Client
             }
         }
 
+        private (Socket socket, IPEndPoint point) ConnectUdp(string ServerHost,int PortNumber)
+        {
+            var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            IPAddress send_to_address = IPAddress.Parse(ServerHost);
+            var sending_end_point = new IPEndPoint(send_to_address, PortNumber);
+
+            System.Threading.Thread.Sleep(1000);
+            sending_socket.SendTo(Encoding.UTF8.GetBytes(ServerHost), sending_end_point);
+
+            return (sending_socket, sending_end_point);
+        }
         public bool ReConnect()
         {
             if (ServerEndPoint == null)
@@ -77,7 +98,7 @@ namespace iSocket.Client
                     //接続処理
                     serverSocket.Connect(ServerEndPoint);
                     SendClientInfo(serverSocket, clientInfo);
-                    clientReceiver.Run(serverSocket, Parent);
+                    //clientReceiver.Run(serverSocket, Parent);
                 }catch(SocketException ex)
                 {
                     if (ex.SocketErrorCode == SocketError.ConnectionRefused)

@@ -46,9 +46,10 @@ namespace iSocketClient
 
             while (true)
             {
-                var ret = (string)client.clientReceiver.Send("Echo", DateTime.Now.ToString());
-                Console.WriteLine(ret);
+                //var ret = (string)client.clientReceiver.Send("Echo", DateTime.Now.ToString());
+                //Console.WriteLine(ret);
 
+                client.clientReceiver.UdpSend("UDP Test");
                 System.Threading.Thread.Sleep(2000);
             }
         }

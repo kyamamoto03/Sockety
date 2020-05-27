@@ -14,20 +14,24 @@ namespace iSocket.Server
     public class ClientHub<T> : IDisposable
     {
         private Socket serverSocket = null;
-        private Thread thread = null;
+        private Thread TcpThread;
+        private Thread UdpThread;
         public ClientInfo ClientInfo;
         private T Parent;
+
+        private UdpPort<T> UdpPort;
         /// <summary>
         /// クライアントが切断時に発火
         /// </summary>
         public Action<ClientInfo> ConnectionReset;
 
 
-        public ClientHub(Socket _handler, ClientInfo _clientInfo,T parent)
+        public ClientHub(Socket _handler, ClientInfo _clientInfo, UdpPort<T> udpPort,T parent)
         {
             this.Parent = parent;
             this.serverSocket = _handler;
             this.ClientInfo = _clientInfo;
+            this.UdpPort = udpPort;
         }
 
         public void Dispose()
@@ -56,9 +60,23 @@ namespace iSocket.Server
 
         public void Run()
         {
-            thread = new Thread(new ThreadStart(ReceiveProcess));
-            thread.Start();
+            TcpThread = new Thread(new ThreadStart(ReceiveProcess));
+            TcpThread.Start();
 
+            UdpThread = new Thread(new ThreadStart(UdpReceiveProcess));
+            UdpThread.Start();
+        }
+
+        private void UdpReceiveProcess()
+        {
+            byte[] CommunicateButter = new byte[1024];
+            while (true)
+            {
+                int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
+                var str = MessagePackSerializer.Deserialize<string>(CommunicateButter);
+
+                Console.WriteLine($"UDP:{str}");
+            }
         }
 
         /// <summary>

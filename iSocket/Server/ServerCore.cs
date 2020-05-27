@@ -43,6 +43,7 @@ namespace iSocket.Server
             MainListener.Bind(localEndPoint);
             MainListener.Listen(10);
 
+
             Task.Run(async () => { 
                 //クライアント接続スレッド
                 while (!_stoppingCts.IsCancellationRequested)
@@ -62,8 +63,20 @@ namespace iSocket.Server
                             Console.WriteLine($"ReConnect ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
                         }
 
+                        //Udp接続
+                        var CanUDPConnectPort = UserCommunicateService<T>.Get().Where(x => x.IsConnect == false).First();
+
+                        //Udpポート番号を送信
+                        handler.Send(MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber));
+
+                        //Udp HolePunching
+                        var ret = await UdpConnect(CanUDPConnectPort.UdpPortNumber);
+                        CanUDPConnectPort.PunchingSocket = ret.s;
+                        CanUDPConnectPort.PunchingPoint = ret.p;
+                        CanUDPConnectPort.IsConnect = true;
+
                         // クライアントが接続したので、受付スレッドを開始する
-                        var clientHub = new ClientHub<T>(handler, clientInfo,Parent);
+                        var clientHub = new ClientHub<T>(handler, clientInfo, CanUDPConnectPort,Parent);
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
@@ -74,6 +87,47 @@ namespace iSocket.Server
                     }
                 }
             });
+        }
+
+        internal async Task<(Socket s , IPEndPoint p)> UdpConnect(int PortNumber)
+        {
+            var WaitingServerAddress = IPAddress.Parse("192.168.2.12");//NetworkInterface.IPAddresses[0];
+            IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
+
+            Console.WriteLine($"Waiting Address:{WaitingServerAddress}");
+
+            string TargetAddress;
+            //クライアントからのメッセージ(UDPホールパンチング）を待つ
+            //groupEPにNATが変換したアドレス＋ポート番号は入ってくる
+            using (var udpClient = new UdpClient(PortNumber))
+            {
+                //Udp Hole Puchingをするために何かしらのデータを受信する(ここではクライアントが指定したサーバのアドレス)
+                TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
+            }
+
+            //NATで変換されたIPアドレスおよびポート番号
+            var ip = groupEP.Address.ToString();
+            var port = groupEP.Port;
+
+            var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
+            PunchingSocket.Bind(new IPEndPoint(WaitingServerAddress, PortNumber));
+
+            var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+
+            return (PunchingSocket, PunchingPoint);
+            //while (true)
+            //{
+            //    //サーバが送信する文字列を作成
+            //    string echo_str = $"ServerSent: {DateTime.Now.ToString()}";
+            //    //Byte配列に変換
+            //    byte[] data = Encoding.UTF8.GetBytes(echo_str);
+            //    //サーバからクライアントへ送信
+            //    PunchingSocket.SendTo(data, SocketFlags.None, PunchingPoint);
+
+            //    await Task.Delay(1000);
+            //}
+
         }
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
