@@ -25,9 +25,10 @@ namespace iSocketClient
             Console.WriteLine("Push!");
         }
 
+        Client<Work> client;
         public void Start()
         {
-            var client = new Client<Work>();
+            client = new Client<Work>();
 
 
             ///再接続処理
@@ -55,11 +56,18 @@ namespace iSocketClient
             }
         }
 
-        public void UdpReceive(object obj)
+        public void UdpReceive(ClientInfo clientInfo,object obj)
         {
             string str = (string)obj;
 
-            Console.WriteLine($"UDP Receive:{obj}");
+            if (client.clientInfo.Equals(clientInfo) == false)
+            {
+                Console.WriteLine($"UDP Receive:{obj}");
+            }
+            else
+            {
+                Console.WriteLine("自分のやつ");
+            }
         }
     }
 

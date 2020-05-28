@@ -16,7 +16,7 @@ namespace Sockety.Client
         private ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
         private T Parent;
         private IPEndPoint ServerEndPoint;
-        private ClientInfo clientInfo;
+        public ClientInfo clientInfo { get; private set; }
         public Action ConnectionReset;
         private string ServerHost;
 
@@ -61,6 +61,7 @@ namespace Sockety.Client
                 clientReceiver.Run(handler:  serverSocket,
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
+                    clientInfo: clientInfo,
                     Parent);
 
             }
@@ -138,6 +139,7 @@ namespace Sockety.Client
                     clientReceiver.Run(handler: serverSocket,
                         UdpSocket: UdpInfo.socket,
                         UdpEndPort: UdpInfo.point,
+                        clientInfo: clientInfo,
                         Parent);
                 }
                 catch (SocketException ex)

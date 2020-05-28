@@ -83,7 +83,6 @@ namespace iSocketServer
                     }
                     cnt = 0;
                 }
-                serverCore.BroadCastUDPNoReturn(DateTime.Now.ToString());
                 Thread.Sleep(1000);
             }
 
@@ -101,10 +100,10 @@ namespace iSocketServer
             return null;
         }
 
-        public void UdpReceive(object obj)
+        public void UdpReceive(ClientInfo sender,object obj)
         {
             string str = (string)obj;
-            Console.WriteLine($"UDP Receive:{str}");
+            Console.WriteLine($"UDP Receive sender:{sender.ClientID} data:{str}");
         }
     }
 }

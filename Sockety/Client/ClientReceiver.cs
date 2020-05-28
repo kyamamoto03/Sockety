@@ -40,6 +40,7 @@ namespace Sockety.Client
         /// </summary>
         private object ServerResponse;
 
+        private ClientInfo ClientInfo;
         /// <summary>
         /// サーバメソッド呼び出しの待ちイベント
         /// </summary>
@@ -64,12 +65,13 @@ namespace Sockety.Client
         }
 
 
-        internal void Run(Socket handler,Socket UdpSocket,IPEndPoint UdpEndPort, T parent)
+        internal void Run(Socket handler,Socket UdpSocket,IPEndPoint UdpEndPort,ClientInfo clientInfo, T parent)
         {
             Parent = parent;
             serverSocket = handler;
             serverUdpSocket = UdpSocket;
             serverUdpPort = UdpEndPort;
+            ClientInfo = clientInfo;
 
             TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpReceiveThread.Start();
@@ -89,7 +91,7 @@ namespace Sockety.Client
                 return;
             }
 
-            SocketyPacket packet = new SocketyPacket { MethodName = "Udp", PackData = data };
+            SocketyPacket packet = new SocketyPacket { MethodName = "Udp", clientInfo = ClientInfo, PackData = data };
 
             var bytes = MessagePackSerializer.Serialize(packet);
 
@@ -113,7 +115,7 @@ namespace Sockety.Client
             {
                 ServerCallMethodName = serverMethodName;
             }
-            SocketyPacket packet = new SocketyPacket {MethodName = serverMethodName, PackData = data };
+            SocketyPacket packet = new SocketyPacket {MethodName = serverMethodName,clientInfo = ClientInfo, PackData = data };
             RecieveSyncEvent.Reset();
             serverSocket.Send(MessagePackSerializer.Serialize(packet));
             RecieveSyncEvent.WaitOne();
@@ -134,7 +136,7 @@ namespace Sockety.Client
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
                     var data = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateBuffer);
-                    Parent.UdpReceive(data.PackData);
+                    Parent.UdpReceive(data.clientInfo,data.PackData);
 
                 }
                 catch(Exception ex)

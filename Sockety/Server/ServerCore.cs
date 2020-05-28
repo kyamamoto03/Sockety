@@ -80,7 +80,14 @@ namespace Sockety.Server
                         CanUDPConnectPort.IsConnect = true;
 
                         // クライアントが接続したので、受付スレッドを開始する
-                        var clientHub = new ClientHub<T>(handler, clientInfo, CanUDPConnectPort, stoppingCts,Parent);
+                        var clientHub = new ClientHub<T>(_handler: handler,
+                            _clientInfo: clientInfo,
+                            udpPort: CanUDPConnectPort,
+                            _stoppingCts: stoppingCts,
+                            userClass: Parent,
+                            parent: this);
+
+
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
@@ -142,11 +149,11 @@ namespace Sockety.Server
         /// UDPにてデータを送信する
         /// </summary>
         /// <param name="data"></param>
-        public void BroadCastUDPNoReturn(object data)
+        internal void BroadCastUDPNoReturn(SocketyPacket packet)
         {
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
-                x.SendUdp(data);
+                x.SendUdp(packet.clientInfo, packet.PackData);
             });
 
         }

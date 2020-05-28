@@ -6,6 +6,6 @@ namespace Sockety.Model
 {
     public interface IService
     {
-        void UdpReceive(object obj);
+        void UdpReceive(ClientInfo clientInfo,object obj);
     }
 }
