@@ -126,8 +126,28 @@ namespace Sockety.Server
 
             var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
-            PunchingSocket.Bind(new IPEndPoint(IPAddress.Parse(TargetAddress), PortNumber));
+            IPAddress BindAddress;
+            try
+            {
+                BindAddress = IPAddress.Parse(TargetAddress);
+                Console.WriteLine($"BindAddress : {BindAddress.ToString()}");
+                PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
+            }
+            catch
+            {
+                try
+                {
+                    BindAddress = NetworkInterface.IPAddresses[0];
+                    Console.WriteLine($"BindAddress : {BindAddress.ToString()}");
+                    PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
 
+                }
+                catch(Exception ex)
+                {
+                    throw ex;
+                }
+            } 
+            
             var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
             return (PunchingSocket, PunchingPoint);
@@ -164,10 +184,33 @@ namespace Sockety.Server
         /// <param name="data"></param>
         public void BroadCastNoReturn(string ClientMethodName,object data)
         {
+            List<ClientHub<T>> DisConnction = new List<ClientHub<T>>();
+
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
-                x.SendNonReturn(ClientMethodName, data);
+                try
+                {
+                    x.SendNonReturn(ClientMethodName, data);
+                }catch(SocketException)
+                {
+                    //切断が発覚したので、切断リストに追加
+                    DisConnction.Add(x);
+                }
             });
+
+            if (DisConnction.Count > 0)
+            {
+                //切断処理を行う
+                DisConnction.ForEach(x => { 
+                    SocketClient<T>.GetInstance().ClientHubs.Remove(x);
+                    x.KillSW = true;
+                    Console.WriteLine("BroadCastNoReturn DisConnect");
+
+                    //通信切断
+                    Task.Run(() => ConnectionReset?.Invoke(x.ClientInfo));
+                });
+            }
+
         }
 
         private ClientInfo ClientInfoReceive(Socket handler)

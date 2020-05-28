@@ -4,7 +4,6 @@ using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +24,7 @@ namespace Sockety.Server
         /// クライアントが切断時に発火
         /// </summary>
         public Action<ClientInfo> ConnectionReset;
-
+        public bool KillSW = false;
 
         public ClientHub(Socket _handler, 
             ClientInfo _clientInfo, 
@@ -46,9 +45,6 @@ namespace Sockety.Server
         {
             if (serverSocket != null)
             {
-                TcpThread.Abort();
-                UdpThread.Abort();
-
                 serverSocket.Shutdown(SocketShutdown.Both);
                 serverSocket.Close();
                 serverSocket = null;
@@ -60,9 +56,12 @@ namespace Sockety.Server
         {
             try
             {
-                var packet = new SocketyPacket() { MethodName = ClientMethodName,PackData = data };
+                var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                 var d = MessagePackSerializer.Serialize(packet);
                 serverSocket.Send(d);
+            }catch(SocketException ex)
+            {
+                throw ex;
             }catch(Exception ex)
             {
                 throw ex;
@@ -97,7 +96,7 @@ namespace Sockety.Server
         {
             byte[] CommunicateButter = new byte[1024];
             UdpPort.PunchingSocket.ReceiveTimeout = 5000;
-            while (true)
+            while (!KillSW)
             {
                 try
                 {
@@ -128,10 +127,14 @@ namespace Sockety.Server
         private async void ReceiveProcess()
         {
             byte[] CommunicateButter = new byte[1024];
-            while (true)
+            while (!KillSW)
             {
                 try
                 {
+                    if (serverSocket == null)
+                    {
+                        return;
+                    }
                     int bytesRec = serverSocket.Receive(CommunicateButter);
                     var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
 
