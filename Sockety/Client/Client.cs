@@ -18,9 +18,12 @@ namespace Sockety.Client
         private IPEndPoint ServerEndPoint;
         private ClientInfo clientInfo;
         public Action ConnectionReset;
+        private string ServerHost;
 
         public void Connect(string ServerHost, int PortNumber,string UserName,object parent)
         {
+            this.ServerHost = ServerHost;
+
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = (T)parent;
 
@@ -33,6 +36,7 @@ namespace Sockety.Client
 
             try
             {
+                //TCP接続
                 serverSocket.Connect(ServerEndPoint);
 
                 Console.WriteLine("Socket connected to {0}",
@@ -43,13 +47,10 @@ namespace Sockety.Client
                 //接続出来たらクライアント情報を送る
                 SendClientInfo(serverSocket, clientInfo);
 
-                byte[] ddd = new byte[1024];
-                serverSocket.Receive(ddd);
-                int port = MessagePackSerializer.Deserialize<int>(ddd);
-
-                var UdpInfo = ConnectUdp(ServerHost, port);
-
                 //Udp接続
+                var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort());
+
+                //受信スレッド作成
                 clientReceiver.Run(handler:  serverSocket,
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
@@ -70,6 +71,12 @@ namespace Sockety.Client
             }
         }
 
+        /// <summary>
+        /// UDP HolePunchingでUDPを接続する
+        /// </summary>
+        /// <param name="ServerHost"></param>
+        /// <param name="PortNumber"></param>
+        /// <returns></returns>
         private (Socket socket, IPEndPoint point) ConnectUdp(string ServerHost,int PortNumber)
         {
             var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -81,6 +88,19 @@ namespace Sockety.Client
 
             return (sending_socket, sending_end_point);
         }
+
+        private int ReceiveUdpPort()
+        {
+            byte[] data = new byte[1024];
+            serverSocket.Receive(data);
+            int port = MessagePackSerializer.Deserialize<int>(data);
+
+            return port;
+        }
+        /// <summary>
+        /// 再接続処理
+        /// </summary>
+        /// <returns></returns>
         public bool ReConnect()
         {
             if (ServerEndPoint == null)
@@ -94,12 +114,22 @@ namespace Sockety.Client
                 try
                 {
                     serverSocket.Close();
+                    //TCP接続
                     serverSocket = new Socket(ServerEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                     //接続処理
                     serverSocket.Connect(ServerEndPoint);
                     SendClientInfo(serverSocket, clientInfo);
-                    //clientReceiver.Run(serverSocket, Parent);
-                }catch(SocketException ex)
+
+                    //Udp接続
+                    var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort());
+
+                    //受信スレッド作成
+                    clientReceiver.Run(handler: serverSocket,
+                        UdpSocket: UdpInfo.socket,
+                        UdpEndPort: UdpInfo.point,
+                        Parent);
+                }
+                catch (SocketException ex)
                 {
                     if (ex.SocketErrorCode == SocketError.ConnectionRefused)
                     {

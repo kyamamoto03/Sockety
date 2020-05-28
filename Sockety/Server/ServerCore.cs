@@ -138,6 +138,10 @@ namespace Sockety.Server
             return true;
         }
 
+        /// <summary>
+        /// UDPにてデータを送信する
+        /// </summary>
+        /// <param name="data"></param>
         public void BroadCastUDPNoReturn(object data)
         {
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
@@ -146,6 +150,11 @@ namespace Sockety.Server
             });
 
         }
+        /// <summary>
+        /// TCPにてデータを送信する
+        /// </summary>
+        /// <param name="ClientMethodName"></param>
+        /// <param name="data"></param>
         public void BroadCastNoReturn(string ClientMethodName,object data)
         {
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
