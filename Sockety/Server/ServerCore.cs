@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Sockety.Server
 {
-    public class ServerCore<T> : IDisposable
+    public class ServerCore<T> : IDisposable where T :IService
     {
         #region IDisposable
         public void Dispose()

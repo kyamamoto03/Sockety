@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Sockety.Server
 {
-    public class ClientHub<T> : IDisposable
+    public class ClientHub<T> : IDisposable where T : IService
     {
         private Socket serverSocket = null;
         private Thread TcpThread;
@@ -95,9 +95,9 @@ namespace Sockety.Server
                 try
                 {
                     int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
-                    var str = MessagePackSerializer.Deserialize<string>(CommunicateButter);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
 
-                    Console.WriteLine($"UDP:{str}");
+                    Parent.UdpReceive(packet.PackData);
                 }
                 catch (SocketException ex)
                 {

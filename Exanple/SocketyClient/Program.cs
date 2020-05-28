@@ -43,14 +43,14 @@ namespace iSocketClient
             };
 
             client.Connect("192.168.2.12", 11000,"ConsoleApp",this);
-            client.clientReceiver.Send("Join", DateTime.Now.ToString());
+            client.Send("Join", DateTime.Now.ToString());
 
             while (true)
             {
                 //var ret = (string)client.clientReceiver.Send("Echo", DateTime.Now.ToString());
                 //Console.WriteLine(ret);
 
-                client.clientReceiver.UdpSend("UDP Test");
+                client.UdpSend("UDP Test");
                 System.Threading.Thread.Sleep(2000);
             }
         }
