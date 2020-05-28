@@ -25,9 +25,10 @@ namespace iSocketClient
             Console.WriteLine("Push!");
         }
 
+        Client<Work> client;
         public void Start()
         {
-            var client = new Client<Work>();
+            client = new Client<Work>();
 
 
             ///再接続処理
@@ -43,23 +44,30 @@ namespace iSocketClient
             };
 
             client.Connect("192.168.2.12", 11000,"ConsoleApp",this);
-            client.clientReceiver.Send("Join", DateTime.Now.ToString());
+            client.Send("Join", DateTime.Now.ToString());
 
             while (true)
             {
-                //var ret = (string)client.clientReceiver.Send("Echo", DateTime.Now.ToString());
+                //var ret = (string)client.Send("Echo", DateTime.Now.ToString());
                 //Console.WriteLine(ret);
 
-                client.clientReceiver.UdpSend("UDP Test");
+                client.UdpSend("UDP Test");
                 System.Threading.Thread.Sleep(2000);
             }
         }
 
-        public void UdpReceive(object obj)
+        public void UdpReceive(ClientInfo clientInfo,object obj)
         {
             string str = (string)obj;
 
-            Console.WriteLine($"UDP Receive:{obj}");
+            if (client.clientInfo.Equals(clientInfo) == false)
+            {
+                Console.WriteLine($"UDP Receive:{obj}");
+            }
+            else
+            {
+                Console.WriteLine("自分のやつ");
+            }
         }
     }
 

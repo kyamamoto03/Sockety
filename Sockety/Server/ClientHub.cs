@@ -4,44 +4,47 @@ using MessagePack;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Sockety.Server
 {
-    public class ClientHub<T> : IDisposable
+    public class ClientHub<T> : IDisposable where T : IService
     {
         private Socket serverSocket = null;
         private Thread TcpThread;
         private Thread UdpThread;
-        public ClientInfo ClientInfo;
-        private T Parent;
-        CancellationTokenSource stoppingCts;
+        public ClientInfo ClientInfo { get; private set; }
+        private T UserClass;
+        private CancellationTokenSource stoppingCts;
         private UdpPort<T> UdpPort;
+        private ServerCore<T> Parent;
         /// <summary>
         /// クライアントが切断時に発火
         /// </summary>
         public Action<ClientInfo> ConnectionReset;
+        public bool KillSW = false;
 
-
-        public ClientHub(Socket _handler, ClientInfo _clientInfo, UdpPort<T> udpPort, CancellationTokenSource _stoppingCts,T parent)
+        public ClientHub(Socket _handler, 
+            ClientInfo _clientInfo, 
+            UdpPort<T> udpPort, 
+            CancellationTokenSource _stoppingCts,
+            T userClass,
+            ServerCore<T>parent)
         {
-            this.Parent = parent;
+            this.UserClass = userClass;
             this.serverSocket = _handler;
             this.ClientInfo = _clientInfo;
             this.UdpPort = udpPort;
             this.stoppingCts = _stoppingCts;
+            this.Parent = parent;
         }
 
         public void Dispose()
         {
             if (serverSocket != null)
             {
-                TcpThread.Abort();
-                UdpThread.Abort();
-
                 serverSocket.Shutdown(SocketShutdown.Both);
                 serverSocket.Close();
                 serverSocket = null;
@@ -49,24 +52,27 @@ namespace Sockety.Server
         }
 
        
-        internal void SendNonReturn(string ClientMethodName,object data)
+        internal void SendNonReturn(string ClientMethodName, object data)
         {
             try
             {
                 var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                 var d = MessagePackSerializer.Serialize(packet);
                 serverSocket.Send(d);
+            }catch(SocketException ex)
+            {
+                throw ex;
             }catch(Exception ex)
             {
                 throw ex;
             }
         }
 
-        internal void SendUdp(object data)
+        internal void SendUdp(ClientInfo Sender,object data)
         {
             try
             {
-                var packet = new SocketyPacket() { MethodName = "UdpReceive", PackData = data };
+                var packet = new SocketyPacket() { MethodName = "UdpReceive",clientInfo = Sender, PackData = data };
                 var bytes = MessagePackSerializer.Serialize(packet);
                 UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
 
@@ -90,14 +96,16 @@ namespace Sockety.Server
         {
             byte[] CommunicateButter = new byte[1024];
             UdpPort.PunchingSocket.ReceiveTimeout = 5000;
-            while (true)
+            while (!KillSW)
             {
                 try
                 {
                     int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
-                    var str = MessagePackSerializer.Deserialize<string>(CommunicateButter);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
 
-                    Console.WriteLine($"UDP:{str}");
+                    //ブロードキャスト
+                    Parent.BroadCastUDPNoReturn(packet);
+                    UserClass.UdpReceive(ClientInfo ,packet.PackData);
                 }
                 catch (SocketException ex)
                 {
@@ -119,10 +127,14 @@ namespace Sockety.Server
         private async void ReceiveProcess()
         {
             byte[] CommunicateButter = new byte[1024];
-            while (true)
+            while (!KillSW)
             {
                 try
                 {
+                    if (serverSocket == null)
+                    {
+                        return;
+                    }
                     int bytesRec = serverSocket.Receive(CommunicateButter);
                     var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
 
@@ -154,14 +166,14 @@ namespace Sockety.Server
 
         private async Task<object> InvokeMethodAsync(SocketyPacket packet)
         {
-            Type t = Parent.GetType();
+            Type t = UserClass.GetType();
             var method = t.GetMethod(packet.MethodName);
 
             if (method == null)
             {
                 throw new Exception("not found Method");
             }
-            object ret = (object)await Task.Run(() => method.Invoke(Parent, new object[] { packet.PackData }));
+            object ret = (object)await Task.Run(() => method.Invoke(UserClass, new object[] { packet.PackData }));
 
             return ret;
         }

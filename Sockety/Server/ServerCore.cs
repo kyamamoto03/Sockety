@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Sockety.Server
 {
-    public class ServerCore<T> : IDisposable
+    public class ServerCore<T> : IDisposable where T :IService
     {
         #region IDisposable
         public void Dispose()
@@ -80,7 +80,14 @@ namespace Sockety.Server
                         CanUDPConnectPort.IsConnect = true;
 
                         // クライアントが接続したので、受付スレッドを開始する
-                        var clientHub = new ClientHub<T>(handler, clientInfo, CanUDPConnectPort, stoppingCts,Parent);
+                        var clientHub = new ClientHub<T>(_handler: handler,
+                            _clientInfo: clientInfo,
+                            udpPort: CanUDPConnectPort,
+                            _stoppingCts: stoppingCts,
+                            userClass: Parent,
+                            parent: this);
+
+
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
@@ -119,8 +126,28 @@ namespace Sockety.Server
 
             var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
-            PunchingSocket.Bind(new IPEndPoint(IPAddress.Parse(TargetAddress), PortNumber));
+            IPAddress BindAddress;
+            try
+            {
+                BindAddress = IPAddress.Parse(TargetAddress);
+                Console.WriteLine($"BindAddress : {BindAddress.ToString()}");
+                PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
+            }
+            catch
+            {
+                try
+                {
+                    BindAddress = NetworkInterface.IPAddresses[0];
+                    Console.WriteLine($"BindAddress : {BindAddress.ToString()}");
+                    PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
 
+                }
+                catch(Exception ex)
+                {
+                    throw ex;
+                }
+            } 
+            
             var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
             return (PunchingSocket, PunchingPoint);
@@ -142,11 +169,11 @@ namespace Sockety.Server
         /// UDPにてデータを送信する
         /// </summary>
         /// <param name="data"></param>
-        public void BroadCastUDPNoReturn(object data)
+        internal void BroadCastUDPNoReturn(SocketyPacket packet)
         {
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
-                x.SendUdp(data);
+                x.SendUdp(packet.clientInfo, packet.PackData);
             });
 
         }
@@ -157,10 +184,33 @@ namespace Sockety.Server
         /// <param name="data"></param>
         public void BroadCastNoReturn(string ClientMethodName,object data)
         {
+            List<ClientHub<T>> DisConnction = new List<ClientHub<T>>();
+
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
-                x.SendNonReturn(ClientMethodName, data);
+                try
+                {
+                    x.SendNonReturn(ClientMethodName, data);
+                }catch(SocketException)
+                {
+                    //切断が発覚したので、切断リストに追加
+                    DisConnction.Add(x);
+                }
             });
+
+            if (DisConnction.Count > 0)
+            {
+                //切断処理を行う
+                DisConnction.ForEach(x => { 
+                    SocketClient<T>.GetInstance().ClientHubs.Remove(x);
+                    x.KillSW = true;
+                    Console.WriteLine("BroadCastNoReturn DisConnect");
+
+                    //通信切断
+                    Task.Run(() => ConnectionReset?.Invoke(x.ClientInfo));
+                });
+            }
+
         }
 
         private ClientInfo ClientInfoReceive(Socket handler)

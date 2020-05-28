@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace iSocketServer
 {
-    class ServerLoop : IHostedService, IDisposable
+    class ServerLoop : IHostedService, IDisposable ,IService
     {
         #region IHostedService
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
@@ -83,7 +83,6 @@ namespace iSocketServer
                     }
                     cnt = 0;
                 }
-                serverCore.BroadCastUDPNoReturn(DateTime.Now.ToString());
                 Thread.Sleep(1000);
             }
 
@@ -99,6 +98,12 @@ namespace iSocketServer
         {
             serverCore.BroadCastNoReturn("UserJoin", UserJoin);
             return null;
+        }
+
+        public void UdpReceive(ClientInfo sender,object obj)
+        {
+            string str = (string)obj;
+            Console.WriteLine($"UDP Receive sender:{sender.ClientID} data:{str}");
         }
     }
 }

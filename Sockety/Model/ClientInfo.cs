@@ -14,5 +14,15 @@ namespace Sockety.Model
         public string Name { get;  set; }
         [Key(2)]
         public DateTime ConnectDate { get; private set; } = DateTime.Now;
+
+        public override bool Equals(object obj)
+        {
+            ClientInfo c = (ClientInfo)obj;
+            if (this.ClientID == c.ClientID)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

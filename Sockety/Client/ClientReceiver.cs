@@ -10,21 +10,43 @@ using System.Threading.Tasks;
 
 namespace Sockety.Client
 {
-    public class ClientReceiver<T>: IDisposable where T: IService
+    internal class ClientReceiver<T>: IDisposable where T: IService
     {
         private Socket serverSocket = null;
         private Socket serverUdpSocket;
         private IPEndPoint serverUdpPort;
 
+        /// <summary>
+        /// TCPの受信用スレッド
+        /// </summary>
         private Thread TcpReceiveThread;
+        /// <summary>
+        /// UDPの受信用スレッド
+        /// </summary>
         private Thread UdpReceiveThread;
 
         private byte[] CommunicateButter = new byte[1024];
         /// <summary>
         /// 通信が切断時に発火
         /// </summary>
-        public Action ConnectionReset;
+        internal Action ConnectionReset;
 
+        /// <summary>
+        /// クライアントが読んでいるサーバのメソッド名
+        /// </summary>
+        private string ServerCallMethodName = "";
+        /// <summary>
+        /// サーバからのレスポンスデータ
+        /// </summary>
+        private object ServerResponse;
+
+        private ClientInfo ClientInfo;
+        /// <summary>
+        /// サーバメソッド呼び出しの待ちイベント
+        /// </summary>
+        private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
+
+        private T Parent;
         #region IDisposable
         public void Dispose()
         {
@@ -32,7 +54,7 @@ namespace Sockety.Client
         }
         #endregion
 
-        public void AbortReceiveProcess()
+        internal void AbortReceiveProcess()
         {
             if (TcpReceiveThread != null)
             {
@@ -42,15 +64,14 @@ namespace Sockety.Client
 
         }
 
-        private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
-        private T Parent;
-        public void Run(Socket handler,Socket UdpSocket,IPEndPoint UdpEndPort, T parent)
+        internal void Run(Socket handler,Socket UdpSocket,IPEndPoint UdpEndPort,ClientInfo clientInfo, T parent)
         {
             Parent = parent;
             serverSocket = handler;
             serverUdpSocket = UdpSocket;
             serverUdpPort = UdpEndPort;
+            ClientInfo = clientInfo;
 
             TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpReceiveThread.Start();
@@ -59,29 +80,52 @@ namespace Sockety.Client
             UdpReceiveThread.Start();
         }
 
-        private string ServerCallMethodName = "";
-        private object ServerResponse;
-
-        public void UdpSend(object data)
+        /// <summary>
+        /// UDP送信
+        /// </summary>
+        /// <param name="data"></param>
+        internal void UdpSend(object data)
         {
-            var bytes = MessagePackSerializer.Serialize(data);
+            if (serverUdpSocket == null)
+            {
+                return;
+            }
+
+            SocketyPacket packet = new SocketyPacket { MethodName = "Udp", clientInfo = ClientInfo, PackData = data };
+
+            var bytes = MessagePackSerializer.Serialize(packet);
 
             serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
         }
 
-        public object Send(string serverMethodName,object data)
+        /// <summary>
+        /// サーバメソッド呼び出し（サーバのレスポンスを待つ）
+        /// </summary>
+        /// <param name="serverMethodName"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        internal object Send(string serverMethodName,object data)
         {
+            if (serverSocket == null || serverSocket.Connected == false)
+            {
+                return null;
+            }
+
             lock (ServerCallMethodName)
             {
                 ServerCallMethodName = serverMethodName;
             }
-            SocketyPacket packet = new SocketyPacket {MethodName = serverMethodName, PackData = data };
+            SocketyPacket packet = new SocketyPacket {MethodName = serverMethodName,clientInfo = ClientInfo, PackData = data };
             RecieveSyncEvent.Reset();
             serverSocket.Send(MessagePackSerializer.Serialize(packet));
             RecieveSyncEvent.WaitOne();
 
             return ServerResponse;
         }
+
+        /// <summary>
+        /// UDP受信用スレッド
+        /// </summary>
         private void UdpReceiveProcess()
         {
             var CommunicateBuffer = new byte[1024];
@@ -92,7 +136,7 @@ namespace Sockety.Client
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
                     var data = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateBuffer);
-                    Parent.UdpReceive(data.PackData);
+                    Parent.UdpReceive(data.clientInfo,data.PackData);
 
                 }
                 catch(Exception ex)
@@ -103,7 +147,7 @@ namespace Sockety.Client
         }
 
         /// <summary>
-        /// 受信を一括して行う
+        /// TCP受信用スレッド
         /// </summary>
         private void ReceiveProcess()
         {
@@ -117,16 +161,19 @@ namespace Sockety.Client
                     {
                         if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
                         {
+                            ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
                             ServerResponse = packet.PackData;
                             RecieveSyncEvent.Set();
                         }
                         else
                         {
+                            ///非同期なので、クライアントメソッドを呼ぶ
                             InvokeMethod(packet);
                         }
                     }
                 }catch(SocketException ex)
                 { 
+                    //通信切断処理
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
                         //通信切断
@@ -143,6 +190,10 @@ namespace Sockety.Client
             }
         }
 
+        /// <summary>
+        /// SocketyPacket.MethodNameのメソッド呼び出し
+        /// </summary>
+        /// <param name="packet"></param>
         private void InvokeMethod(SocketyPacket packet)
         {
             Type t = Parent.GetType();

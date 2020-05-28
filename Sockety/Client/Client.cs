@@ -13,13 +13,20 @@ namespace Sockety.Client
     public class Client<T> : IDisposable where T:IService 
     {
         private Socket serverSocket;
-        public ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
+        private ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
         private T Parent;
         private IPEndPoint ServerEndPoint;
-        private ClientInfo clientInfo;
+        public ClientInfo clientInfo { get; private set; }
         public Action ConnectionReset;
         private string ServerHost;
 
+        /// <summary>
+        /// 接続
+        /// </summary>
+        /// <param name="ServerHost"></param>
+        /// <param name="PortNumber"></param>
+        /// <param name="UserName"></param>
+        /// <param name="parent"></param>
         public void Connect(string ServerHost, int PortNumber,string UserName,object parent)
         {
             this.ServerHost = ServerHost;
@@ -54,6 +61,7 @@ namespace Sockety.Client
                 clientReceiver.Run(handler:  serverSocket,
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
+                    clientInfo: clientInfo,
                     Parent);
 
             }
@@ -89,6 +97,10 @@ namespace Sockety.Client
             return (sending_socket, sending_end_point);
         }
 
+        /// <summary>
+        /// UDPの接続ポート番号を受信
+        /// </summary>
+        /// <returns></returns>
         private int ReceiveUdpPort()
         {
             byte[] data = new byte[1024];
@@ -127,6 +139,7 @@ namespace Sockety.Client
                     clientReceiver.Run(handler: serverSocket,
                         UdpSocket: UdpInfo.socket,
                         UdpEndPort: UdpInfo.point,
+                        clientInfo: clientInfo,
                         Parent);
                 }
                 catch (SocketException ex)
@@ -177,6 +190,26 @@ namespace Sockety.Client
         {
             byte[] bytes = MessagePackSerializer.Serialize(clientInfo);
             socket.Send(bytes);
+        }
+
+        /// <summary>
+        /// サーバメソッド呼び出し(TCP)
+        /// </summary>
+        /// <param name="serverMethodName"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public object Send(string serverMethodName, object data)
+        {
+            return clientReceiver.Send(serverMethodName, data);
+        }
+
+        /// <summary>
+        /// UDP送信
+        /// </summary>
+        /// <param name="data"></param>
+        public void UdpSend(object data)
+        {
+            clientReceiver.UdpSend(data);
         }
     }
 }
