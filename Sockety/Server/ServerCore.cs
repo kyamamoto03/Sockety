@@ -169,11 +169,11 @@ namespace Sockety.Server
         /// UDPにてデータを送信する
         /// </summary>
         /// <param name="data"></param>
-        internal void BroadCastUDPNoReturn(SocketyPacket packet)
+        internal void BroadCastUDPNoReturn(SocketyPacketUDP packet)
         {
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
             {
-                x.SendUdp(packet.clientInfo, packet.PackData);
+                x.SendUdp(packet);
             });
 
         }

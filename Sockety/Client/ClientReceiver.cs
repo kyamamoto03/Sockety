@@ -91,7 +91,7 @@ namespace Sockety.Client
                 return;
             }
 
-            SocketyPacket packet = new SocketyPacket { MethodName = "Udp", clientInfo = ClientInfo, PackData = data };
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = ClientInfo, PackData = data };
 
             var bytes = MessagePackSerializer.Serialize(packet);
 
@@ -135,7 +135,7 @@ namespace Sockety.Client
                 try
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
-                    var data = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateBuffer);
+                    var data = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
                     Parent.UdpReceive(data.clientInfo,data.PackData);
 
                 }

@@ -68,11 +68,11 @@ namespace Sockety.Server
             }
         }
 
-        internal void SendUdp(ClientInfo Sender,object data)
+        internal void SendUdp(SocketyPacketUDP packet)
         {
             try
             {
-                var packet = new SocketyPacket() { MethodName = "UdpReceive",clientInfo = Sender, PackData = data };
+                //var packet = new SocketyPacket() { MethodName = "UdpReceive",clientInfo = Sender, PackData = data };
                 var bytes = MessagePackSerializer.Serialize(packet);
                 UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
 
@@ -101,7 +101,7 @@ namespace Sockety.Server
                 try
                 {
                     int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateButter);
 
                     //ブロードキャスト
                     Parent.BroadCastUDPNoReturn(packet);
