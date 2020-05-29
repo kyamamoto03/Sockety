@@ -50,19 +50,19 @@ namespace iSocketClient
             {
                 //var ret = (string)client.Send("Echo", DateTime.Now.ToString());
                 //Console.WriteLine(ret);
-
-                client.UdpSend("UDP Test");
+                var t = Encoding.ASCII.GetBytes("UDP Test");
+                client.UdpSend(t);
                 System.Threading.Thread.Sleep(2000);
             }
         }
 
-        public void UdpReceive(ClientInfo clientInfo,object obj)
+        public void UdpReceive(ClientInfo clientInfo,byte[] obj)
         {
-            string str = (string)obj;
+            string str = Encoding.ASCII.GetString(obj);
 
             if (client.clientInfo.Equals(clientInfo) == false)
             {
-                Console.WriteLine($"UDP Receive:{obj}");
+                Console.WriteLine($"UDP Receive:{str}");
             }
             else
             {

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Sockety.Service;
 
 namespace Sockety.Client
 {
@@ -47,12 +48,15 @@ namespace Sockety.Client
         private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
         private T Parent;
+        PacketSerivce<T> PacketSerivce;
+
         #region IDisposable
         public void Dispose()
         {
             AbortReceiveProcess();
         }
         #endregion
+
 
         internal void AbortReceiveProcess()
         {
@@ -73,6 +77,9 @@ namespace Sockety.Client
             serverUdpPort = UdpEndPort;
             ClientInfo = clientInfo;
 
+            PacketSerivce = new PacketSerivce<T>();
+            PacketSerivce.SetUp(parent);
+
             TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpReceiveThread.Start();
 
@@ -84,14 +91,12 @@ namespace Sockety.Client
         /// UDP送信
         /// </summary>
         /// <param name="data"></param>
-        internal void UdpSend(object data)
+        internal void UdpSend(SocketyPacketUDP packet)
         {
             if (serverUdpSocket == null)
             {
                 return;
             }
-
-            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = ClientInfo, PackData = data };
 
             var bytes = MessagePackSerializer.Serialize(packet);
 
@@ -135,9 +140,9 @@ namespace Sockety.Client
                 try
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
-                    var data = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
-                    Parent.UdpReceive(data.clientInfo,data.PackData);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
 
+                    Task.Run(() => PacketSerivce.ReceiverSocketyPacketUDP(packet));
                 }
                 catch(Exception ex)
                 {

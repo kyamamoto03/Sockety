@@ -99,9 +99,9 @@ namespace iSocketServer
             serverCore.BroadCastNoReturn("UserJoin", UserJoin);
         }
 
-        public void UdpReceive(ClientInfo sender,object obj)
+        public void UdpReceive(ClientInfo sender,byte[] obj)
         {
-            string str = (string)obj;
+            string str = Encoding.ASCII.GetString(obj);
             Console.WriteLine($"UDP Receive sender:{sender.ClientID} data:{str}");
         }
     }

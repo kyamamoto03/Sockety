@@ -177,6 +177,7 @@ namespace Sockety.Server
             });
 
         }
+
         /// <summary>
         /// TCPにてデータを送信する
         /// </summary>

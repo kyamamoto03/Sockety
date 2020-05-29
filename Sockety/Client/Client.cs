@@ -7,6 +7,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Reflection.Emit;
 using System.Text;
+using Sockety.Service;
+using System.Threading;
 
 namespace Sockety.Client
 {
@@ -207,9 +209,15 @@ namespace Sockety.Client
         /// UDP送信
         /// </summary>
         /// <param name="data"></param>
-        public void UdpSend(object data)
+        public void UdpSend(byte[] data)
         {
-            clientReceiver.UdpSend(data);
+            //パケット分割
+            var packets = PacketSerivce<T>.PacketSplit(clientInfo,data);
+
+            packets.ForEach(x => {
+                clientReceiver.UdpSend(x);
+                Thread.Sleep(1);
+            });
         }
     }
 }

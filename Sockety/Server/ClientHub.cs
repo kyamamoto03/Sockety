@@ -7,6 +7,8 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using Sockety.Service;
 
 namespace Sockety.Server
 {
@@ -26,6 +28,8 @@ namespace Sockety.Server
         public Action<ClientInfo> ConnectionReset;
         public bool KillSW = false;
 
+        PacketSerivce<T> PacketSerivce;
+
         public ClientHub(Socket _handler, 
             ClientInfo _clientInfo, 
             UdpPort<T> udpPort, 
@@ -39,6 +43,9 @@ namespace Sockety.Server
             this.UdpPort = udpPort;
             this.stoppingCts = _stoppingCts;
             this.Parent = parent;
+
+            PacketSerivce = new PacketSerivce<T>();
+            PacketSerivce.SetUp(userClass);
         }
 
         public void Dispose()
@@ -105,7 +112,8 @@ namespace Sockety.Server
 
                     //ブロードキャスト
                     Parent.BroadCastUDPNoReturn(packet);
-                    UserClass.UdpReceive(ClientInfo ,packet.PackData);
+
+                    PacketSerivce.ReceiverSocketyPacketUDP(packet);
                 }
                 catch (SocketException ex)
                 {
