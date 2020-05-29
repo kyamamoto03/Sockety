@@ -94,10 +94,9 @@ namespace iSocketServer
             return $"ServerEcho {data}";
         }
 
-        public object Join(string UserJoin)
+        public void Join(string UserJoin)
         {
             serverCore.BroadCastNoReturn("UserJoin", UserJoin);
-            return null;
         }
 
         public void UdpReceive(ClientInfo sender,object obj)
