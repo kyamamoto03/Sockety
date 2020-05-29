@@ -215,7 +215,7 @@ namespace Sockety.Server
 
         private ClientInfo ClientInfoReceive(Socket handler)
         {
-            byte[] bytes = new Byte[1024];
+            byte[] bytes = new Byte[SocketySetting.MAX_BUFFER];
             handler.Receive(bytes);
             ClientInfo clientInfo = MessagePackSerializer.Deserialize<ClientInfo>(bytes);
 

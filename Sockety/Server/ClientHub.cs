@@ -94,7 +94,7 @@ namespace Sockety.Server
 
         private void UdpReceiveProcess()
         {
-            byte[] CommunicateButter = new byte[1024];
+            byte[] CommunicateButter = new byte[SocketySetting.MAX_BUFFER];
             UdpPort.PunchingSocket.ReceiveTimeout = 5000;
             while (!KillSW)
             {
@@ -126,7 +126,7 @@ namespace Sockety.Server
         /// </summary>
         private async void ReceiveProcess()
         {
-            byte[] CommunicateButter = new byte[1024];
+            byte[] CommunicateButter = new byte[SocketySetting.MAX_BUFFER];
             while (!KillSW)
             {
                 try

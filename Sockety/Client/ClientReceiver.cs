@@ -25,7 +25,7 @@ namespace Sockety.Client
         /// </summary>
         private Thread UdpReceiveThread;
 
-        private byte[] CommunicateButter = new byte[1024];
+        private byte[] CommunicateButter = new byte[SocketySetting.MAX_BUFFER];
         /// <summary>
         /// 通信が切断時に発火
         /// </summary>
@@ -128,7 +128,7 @@ namespace Sockety.Client
         /// </summary>
         private void UdpReceiveProcess()
         {
-            var CommunicateBuffer = new byte[1024];
+            var CommunicateBuffer = new byte[SocketySetting.MAX_BUFFER];
 
             while(true)
             {

@@ -103,7 +103,7 @@ namespace Sockety.Client
         /// <returns></returns>
         private int ReceiveUdpPort()
         {
-            byte[] data = new byte[1024];
+            byte[] data = new byte[SocketySetting.MAX_BUFFER];
             serverSocket.Receive(data);
             int port = MessagePackSerializer.Deserialize<int>(data);
 
