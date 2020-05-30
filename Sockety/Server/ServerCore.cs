@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 
 namespace Sockety.Server
 {
@@ -183,16 +184,43 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="ClientMethodName"></param>
         /// <param name="data"></param>
-        public void BroadCastNoReturn(string ClientMethodName,object data)
+        public void BroadCastNoReturn(string ClientMethodName,object data, List<Group> GroupLists = null)
         {
             List<ClientHub<T>> DisConnction = new List<ClientHub<T>>();
 
-            SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+            List<ClientHub<T>> SendLists;
+            if (GroupLists == null)
+            {
+                SendLists = SocketClient<T>.GetInstance().ClientHubs;
+            }
+            else
+            {
+                SendLists = new List<ClientHub<T>>();
+                ///送信先をグループで検索しリストを作成
+                SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+                {
+                    foreach (var g in GroupLists)
+                    {
+                        if (x.ClientInfo.JoinGroups.Contains(g) == true)
+                        {
+                            if (SendLists.Contains(x) == false)
+                            {
+                                SendLists.Add(x);
+                                break;
+                            }
+                        }
+                    }
+                });
+
+            }
+
+            SendLists.ForEach(x =>
             {
                 try
                 {
                     x.SendNonReturn(ClientMethodName, data);
-                }catch(SocketException)
+                }
+                catch (SocketException)
                 {
                     //切断が発覚したので、切断リストに追加
                     DisConnction.Add(x);

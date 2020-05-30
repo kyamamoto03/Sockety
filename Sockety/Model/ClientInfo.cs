@@ -14,6 +14,8 @@ namespace Sockety.Model
         public string Name { get;  set; }
         [Key(2)]
         public DateTime ConnectDate { get; private set; } = DateTime.Now;
+        [Key(3)]
+        public List<Group> JoinGroups { get; set; } = new List<Group>();
 
         public override bool Equals(object obj)
         {

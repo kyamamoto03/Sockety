@@ -52,8 +52,13 @@ namespace iSocketServer
         private int PortNumber = 11000;
         public ServerCore<ServerLoop> serverCore = new ServerCore<ServerLoop>();
 
+        private List<Group> ClientGroups = new List<Group>();
         private async Task MainLoop()
         {
+            //グループを作成
+            var group = Group.Create();
+            ClientGroups.Add(group);
+
             serverCore.ConnectionReset = (x) =>
             {
                 Console.WriteLine($"{x.Name}さんが切断されました");
@@ -88,15 +93,18 @@ namespace iSocketServer
 
         }
 
-        public object Echo(object obj)
+        public object Echo(ClientInfo sendclientInfo, object obj)
         {
             string data = (string)obj;
             return $"ServerEcho {data}";
         }
 
-        public void Join(string UserJoin)
+        public void Join(ClientInfo sendclientInfo,string UserJoin)
         {
-            serverCore.BroadCastNoReturn("UserJoin", UserJoin);
+            //Joinしてきたクライアントにグループを追加
+            sendclientInfo.JoinGroups.Add(ClientGroups[0]);
+
+            serverCore.BroadCastNoReturn("UserJoin", UserJoin, ClientGroups);
         }
 
         public void UdpReceive(ClientInfo sender,byte[] obj)

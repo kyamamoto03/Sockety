@@ -181,7 +181,7 @@ namespace Sockety.Server
             {
                 throw new Exception("not found Method");
             }
-            object ret = (object)await Task.Run(() => method.Invoke(UserClass, new object[] { packet.PackData }));
+            object ret = (object)await Task.Run(() => method.Invoke(UserClass, new object[] {ClientInfo, packet.PackData }));
 
             return ret;
         }
