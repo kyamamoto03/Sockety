@@ -1,9 +1,11 @@
 ﻿using Sockety.Client;
+using Sockety.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -45,34 +47,68 @@ namespace iSocketClientUWP
         }
     }
 
-    class Work
+    class Work : IService
     {
         public MainPage Parent;
-        public void UserJoin(byte[] packet)
+
+        public void UserJoin(string JoinUserName)
         {
-            Console.WriteLine("{0}",
-                    System.Text.Encoding.ASCII.GetString(packet, 0, packet.Length));
+            Console.WriteLine($"Join: {JoinUserName}");
         }
-        public void Push(byte[] a)
+
+        public void Push()
         {
-            Task.Run(async () => await Parent.Dispatcher.RunAsync(CoreDispatcherPriority.Normal,  () =>
+            Task.Run(async () => await Parent.Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
                 Parent.e();
             }
             ));
         }
 
+        Client<Work> client;
         public void Start()
         {
-            var client = new Client<Work>();
+            client = new Client<Work>();
 
-            client.Connect("192.168.2.12", 11000,"HoloLens2", this);
+
+            ///再接続処理
+            client.ConnectionReset = () =>
+            {
+                while (true)
+                {
+                    if (client.ReConnect() == true)
+                    {
+                        return;
+                    }
+                }
+            };
+
+            client.Connect("localhost", 11000, "ConsoleApp", this);
+            client.Send("Join", DateTime.Now.ToString());
+
             while (true)
             {
+                //var ret = (string)client.Send("Echo", DateTime.Now.ToString());
+                //Console.WriteLine(ret);
+                var t = Encoding.ASCII.GetBytes("UDP Test");
+                client.UdpSend(t);
                 System.Threading.Thread.Sleep(2000);
             }
         }
 
+        public void UdpReceive(ClientInfo clientInfo, byte[] obj)
+        {
+            string str = Encoding.ASCII.GetString(obj);
+
+            if (client.clientInfo.Equals(clientInfo) == false)
+            {
+                Console.WriteLine($"UDP Receive:{str}");
+            }
+            else
+            {
+                Console.WriteLine("自分のやつ");
+            }
+        }
     }
 
 }
