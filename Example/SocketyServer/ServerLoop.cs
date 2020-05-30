@@ -99,12 +99,12 @@ namespace iSocketServer
             return $"ServerEcho {data}";
         }
 
-        public void Join(ClientInfo sendclientInfo,string UserJoin)
+        public void Join(ClientInfo sendclientInfo,string JoinDate)
         {
             //Joinしてきたクライアントにグループを追加
             sendclientInfo.JoinGroups.Add(ClientGroups[0]);
 
-            serverCore.BroadCastNoReturn("UserJoin", UserJoin, ClientGroups);
+            serverCore.BroadCastNoReturn("UserJoin", JoinDate, ClientGroups);
         }
 
         public void UdpReceive(ClientInfo sender,byte[] obj)

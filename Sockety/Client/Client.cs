@@ -90,8 +90,11 @@ namespace Sockety.Client
         private (Socket socket, IPEndPoint point) ConnectUdp(string ServerHost,int PortNumber)
         {
             var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            IPAddress send_to_address = IPAddress.Parse(ServerHost);
-            var sending_end_point = new IPEndPoint(send_to_address, PortNumber);
+
+            IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
+            var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+
+            var sending_end_point = new IPEndPoint(host, PortNumber);
 
             System.Threading.Thread.Sleep(1000);
             sending_socket.SendTo(Encoding.UTF8.GetBytes(ServerHost), sending_end_point);
