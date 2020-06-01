@@ -97,7 +97,7 @@ namespace Sockety.Client
             var sending_end_point = new IPEndPoint(host, PortNumber);
 
             System.Threading.Thread.Sleep(1000);
-            sending_socket.SendTo(Encoding.UTF8.GetBytes(ServerHost), sending_end_point);
+            sending_socket.SendTo(Encoding.UTF8.GetBytes(host.ToString()), sending_end_point);
 
             return (sending_socket, sending_end_point);
         }
