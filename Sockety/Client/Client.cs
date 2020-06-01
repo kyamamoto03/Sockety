@@ -36,8 +36,17 @@ namespace Sockety.Client
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = (T)parent;
 
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
-            var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+
+            IPAddress host;
+            if (IPAddress.TryParse(ServerHost,out host) == false)
+            {
+                IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
+                 host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+            }
+            else
+            {
+                host = IPAddress.Parse(ServerHost);
+            }
             ServerEndPoint = new IPEndPoint(host, PortNumber);
 
             // Create a TCP/IP  socket.  
