@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Sockety.Client;
 using Sockety.Model;
 
@@ -28,7 +29,15 @@ namespace iSocketClient
         Client<Work> client;
         public void Start()
         {
-            client = new Client<Work>();
+            var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                .AddConsole()
+                .AddDebug();
+            });
+            ILogger logger = loggerFactory.CreateLogger<Program>();
+
+            client = new Client<Work>(logger);
 
 
             ///再接続処理

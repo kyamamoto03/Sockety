@@ -79,7 +79,6 @@ namespace Sockety.Server
         {
             try
             {
-                //var packet = new SocketyPacket() { MethodName = "UdpReceive",clientInfo = Sender, PackData = data };
                 var bytes = MessagePackSerializer.Serialize(packet);
                 UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
 

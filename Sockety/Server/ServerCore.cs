@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Logging;
 
 namespace Sockety.Server
 {
@@ -27,6 +28,7 @@ namespace Sockety.Server
             }
         }
         #endregion
+        private ILogger Logger;
 
         private Socket MainListener;
         private T Parent;
@@ -36,6 +38,11 @@ namespace Sockety.Server
         /// </summary>
         public Action<ClientInfo> ConnectionReset;
 
+        public ServerCore(ILogger logger)
+        {
+            Logger = logger;
+        }
+            
         public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts,T parent)
         {
             Parent = parent;
@@ -55,17 +62,17 @@ namespace Sockety.Server
                 {
                     try
                     {
-                        Console.WriteLine("Waiting for a connection...");
+                        Logger.LogInformation("Waiting for a connection...");
                         Socket handler = await MainListener.AcceptAsync();
                         //クライアント情報を受信
                         var clientInfo = ClientInfoReceive(handler);
                         if (ClientInfoManagement(clientInfo) == true)
                         {
-                            Console.WriteLine($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
+                            Logger.LogInformation($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
                         }
                         else
                         {
-                            Console.WriteLine($"ReConnect ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
+                            Logger.LogInformation($"ReConnect ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
                         }
 
                         //Udp接続
@@ -131,7 +138,7 @@ namespace Sockety.Server
             try
             {
                 BindAddress = IPAddress.Parse(TargetAddress);
-                Console.WriteLine($"BindAddress : {BindAddress.ToString()}");
+                Logger.LogInformation($"BindAddress : {BindAddress.ToString()}");
                 PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
             }
             catch
@@ -139,7 +146,7 @@ namespace Sockety.Server
                 try
                 {
                     BindAddress = NetworkInterface.IPAddresses[0];
-                    Console.WriteLine($"BindAddress : {BindAddress.ToString()}");
+                    Logger.LogInformation($"BindAddress : {BindAddress.ToString()}");
                     PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
 
                 }
@@ -233,7 +240,7 @@ namespace Sockety.Server
                 DisConnction.ForEach(x => { 
                     SocketClient<T>.GetInstance().ClientHubs.Remove(x);
                     x.KillSW = true;
-                    Console.WriteLine("BroadCastNoReturn DisConnect");
+                    Logger.LogInformation("BroadCastNoReturn DisConnect");
 
                     //通信切断
                     Task.Run(() => ConnectionReset?.Invoke(x.ClientInfo));
