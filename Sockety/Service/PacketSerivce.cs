@@ -1,6 +1,7 @@
 ﻿using Sockety.Model;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Sockety.Service
@@ -93,7 +94,7 @@ namespace Sockety.Service
 
                     byte[] data = new byte[length];
                     int i = 0;
-                    pakcetList.ForEach(x =>
+                    pakcetList.OrderBy(x => x.PacketNo).ToList().ForEach(x =>
                     {
                         if (x.PackData != null)
                         {
