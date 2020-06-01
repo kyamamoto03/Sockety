@@ -100,8 +100,16 @@ namespace Sockety.Client
         {
             var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
-            IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
-            var host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+            IPAddress host;
+            if (IPAddress.TryParse(ServerHost, out host) == false)
+            {
+                IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
+                host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+            }
+            else
+            {
+                host = IPAddress.Parse(ServerHost);
+            }
 
             var sending_end_point = new IPEndPoint(host, PortNumber);
 
