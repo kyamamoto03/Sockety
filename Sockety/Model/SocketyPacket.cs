@@ -14,6 +14,6 @@ namespace Sockety.Model
         [Key(1)]
         public ClientInfo clientInfo { get; set; }
         [Key(2)]
-        public object PackData { get; set; }
+        public byte[] PackData { get; set; }
     }
 }

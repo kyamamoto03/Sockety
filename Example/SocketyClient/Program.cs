@@ -15,9 +15,9 @@ namespace iSocketClient
     }
     class Work : IService
     {
-        public void UserJoin(string JoinUserName)
+        public void UserJoin(byte[] JoinUserNameBytes)
         {
-            Console.WriteLine($"Join: {JoinUserName}");
+            Console.WriteLine($"Join: {Encoding.ASCII.GetString(JoinUserNameBytes)}");
         }
 
         public void Push()
@@ -44,7 +44,9 @@ namespace iSocketClient
             };
 
             client.Connect("192.168.85.162", 11000,"ConsoleApp",this);
-            client.Send("Join", DateTime.Now.ToString());
+            client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+            var echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+            Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
 
             while (true)
             {

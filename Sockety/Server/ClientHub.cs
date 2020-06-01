@@ -59,7 +59,7 @@ namespace Sockety.Server
         }
 
        
-        internal void SendNonReturn(string ClientMethodName, object data)
+        internal void SendNonReturn(string ClientMethodName, byte[] data)
         {
             try
             {
@@ -174,7 +174,7 @@ namespace Sockety.Server
             }
         }
 
-        private async Task<object> InvokeMethodAsync(SocketyPacket packet)
+        private async Task<byte[]> InvokeMethodAsync(SocketyPacket packet)
         {
             Type t = UserClass.GetType();
             var method = t.GetMethod(packet.MethodName);
@@ -183,7 +183,7 @@ namespace Sockety.Server
             {
                 throw new Exception("not found Method");
             }
-            object ret = (object)await Task.Run(() => method.Invoke(UserClass, new object[] {ClientInfo, packet.PackData }));
+            byte[] ret = (byte[])await Task.Run(() => method.Invoke(UserClass, new object[] {ClientInfo, packet.PackData }));
 
             return ret;
         }

@@ -39,7 +39,7 @@ namespace Sockety.Client
         /// <summary>
         /// サーバからのレスポンスデータ
         /// </summary>
-        private object ServerResponse;
+        private byte[] ServerResponse;
 
         private ClientInfo ClientInfo;
         /// <summary>
@@ -109,7 +109,7 @@ namespace Sockety.Client
         /// <param name="serverMethodName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        internal object Send(string serverMethodName,object data)
+        internal byte[] Send(string serverMethodName,byte[] data)
         {
             if (serverSocket == null || serverSocket.Connected == false)
             {

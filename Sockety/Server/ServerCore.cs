@@ -184,7 +184,7 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="ClientMethodName"></param>
         /// <param name="data"></param>
-        public void BroadCastNoReturn(string ClientMethodName,object data, List<Group> GroupLists = null)
+        public void BroadCastNoReturn(string ClientMethodName,byte[] data, List<Group> GroupLists = null)
         {
             List<ClientHub<T>> DisConnction = new List<ClientHub<T>>();
 

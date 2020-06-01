@@ -93,13 +93,13 @@ namespace iSocketServer
 
         }
 
-        public object Echo(ClientInfo sendclientInfo, object obj)
+        public byte[] Echo(ClientInfo sendclientInfo, byte[] obj)
         {
-            string data = (string)obj;
-            return $"ServerEcho {data}";
+            string data =Encoding.ASCII.GetString(obj);
+            return Encoding.ASCII.GetBytes($"ServerEcho {data}");
         }
 
-        public void Join(ClientInfo sendclientInfo,string JoinDate)
+        public void Join(ClientInfo sendclientInfo,byte[] JoinDate)
         {
             //Joinしてきたクライアントにグループを追加
             sendclientInfo.JoinGroups.Add(ClientGroups[0]);

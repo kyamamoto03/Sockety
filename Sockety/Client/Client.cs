@@ -220,7 +220,7 @@ namespace Sockety.Client
         /// <param name="serverMethodName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        public object Send(string serverMethodName, object data)
+        public byte[] Send(string serverMethodName, byte[] data)
         {
             return clientReceiver.Send(serverMethodName, data);
         }
