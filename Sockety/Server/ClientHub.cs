@@ -108,12 +108,14 @@ namespace Sockety.Server
                 try
                 {
                     int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateButter);
+                    Task.Run(() => { 
+                        var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateButter);
 
-                    //ブロードキャスト
-                    Parent.BroadCastUDPNoReturn(packet);
+                        //ブロードキャスト
+                        Parent.BroadCastUDPNoReturn(packet);
 
-                    PacketSerivce.ReceiverSocketyPacketUDP(packet);
+                        PacketSerivce.ReceiverSocketyPacketUDP(packet);
+                    });
                 }
                 catch (SocketException ex)
                 {

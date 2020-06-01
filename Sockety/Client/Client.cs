@@ -219,7 +219,7 @@ namespace Sockety.Client
 
             packets.ForEach(x => {
                 clientReceiver.UdpSend(x);
-                Thread.Sleep(1);
+                Thread.Sleep(5);
             });
         }
     }

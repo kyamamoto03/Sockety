@@ -59,7 +59,7 @@ namespace Sockety.Server
                         Socket handler = await MainListener.AcceptAsync();
                         //クライアント情報を受信
                         var clientInfo = ClientInfoReceive(handler);
-                        if (ClientInfoManagement(clientInfo) == false)
+                        if (ClientInfoManagement(clientInfo) == true)
                         {
                             Console.WriteLine($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
                         }

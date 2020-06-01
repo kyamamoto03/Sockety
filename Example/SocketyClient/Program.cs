@@ -43,7 +43,7 @@ namespace iSocketClient
                 }
             };
 
-            client.Connect("localhost", 11000,"ConsoleApp",this);
+            client.Connect("192.168.85.162", 11000,"ConsoleApp",this);
             client.Send("Join", DateTime.Now.ToString());
 
             while (true)
