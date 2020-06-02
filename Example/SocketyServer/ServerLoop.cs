@@ -117,6 +117,9 @@ namespace iSocketServer
 
         public void UdpReceive(ClientInfo sender,byte[] obj)
         {
+            //ブロードキャスト
+            serverCore.BroadCastUDPNoReturn(sender, obj);
+
             string str = Encoding.ASCII.GetString(obj);
             Logger.LogInformation($"UDP Receive sender:{sender.ClientID} data:{str}");
         }

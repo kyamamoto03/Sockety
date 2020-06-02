@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
+using Sockety.Service;
 
 namespace Sockety.Server
 {
@@ -177,11 +178,46 @@ namespace Sockety.Server
         /// UDPにてデータを送信する
         /// </summary>
         /// <param name="data"></param>
-        internal void BroadCastUDPNoReturn(SocketyPacketUDP packet)
+        public void BroadCastUDPNoReturn(ClientInfo clientInfo, byte[] data, List<Group> GroupLists = null)
         {
-            SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+            //パケット分割
+            var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
+
+
+
+            List<ClientHub<T>> SendLists;
+            if (GroupLists == null)
             {
-                x.SendUdp(packet);
+                SendLists = SocketClient<T>.GetInstance().ClientHubs;
+            }
+            else
+            {
+                SendLists = new List<ClientHub<T>>();
+                ///送信先をグループで検索しリストを作成
+                SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+                {
+                    foreach (var g in GroupLists)
+                    {
+                        if (x.ClientInfo.JoinGroups.Contains(g) == true)
+                        {
+                            if (SendLists.Contains(x) == false)
+                            {
+                                SendLists.Add(x);
+                                break;
+                            }
+                        }
+                    }
+                });
+
+            }
+
+            SendLists.ForEach(x =>
+            {
+                Task.Run(() =>
+                {
+                    packets.ForEach(p => x.SendUdp(p));
+                    Thread.Sleep(5);
+                });
             });
 
         }

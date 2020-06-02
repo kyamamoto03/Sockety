@@ -52,7 +52,7 @@ namespace iSocketClient
                 }
             };
 
-            client.Connect("192.168.85.162", 11000,"ConsoleApp",this);
+            client.Connect("192.168.50.220", 11000,"ConsoleApp",this);
             client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             var echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");

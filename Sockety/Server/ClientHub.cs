@@ -110,9 +110,7 @@ namespace Sockety.Server
                     Task.Run(() => { 
                         var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateButter);
 
-                        //ブロードキャスト
-                        Parent.BroadCastUDPNoReturn(packet);
-
+                        //親クラスを呼び出す
                         PacketSerivce.ReceiverSocketyPacketUDP(packet);
                     });
                 }
