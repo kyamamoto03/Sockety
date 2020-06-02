@@ -9,6 +9,7 @@ using System.Reflection.Emit;
 using System.Text;
 using Sockety.Service;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace Sockety.Client
 {
@@ -21,7 +22,12 @@ namespace Sockety.Client
         public ClientInfo clientInfo { get; private set; }
         public Action ConnectionReset;
         private string ServerHost;
+        private ILogger Logger;
 
+        public Client(ILogger logger)
+        {
+            Logger = logger;
+        }
         /// <summary>
         /// 接続
         /// </summary>
@@ -57,7 +63,7 @@ namespace Sockety.Client
                 //TCP接続
                 serverSocket.Connect(ServerEndPoint);
 
-                Console.WriteLine("Socket connected to {0}",
+                Logger.LogInformation("Socket connected to {0}",
                     serverSocket.RemoteEndPoint.ToString());
 
                 //新規の接続なのでClientInfoを作成
@@ -78,15 +84,15 @@ namespace Sockety.Client
             }
             catch (ArgumentNullException ane)
             {
-                Console.WriteLine("ArgumentNullException : {0}", ane.ToString());
+                Logger.LogError("ArgumentNullException : {0}", ane.ToString());
             }
             catch (SocketException se)
             {
-                Console.WriteLine("SocketException : {0}", se.ToString());
+                Logger.LogError("SocketException : {0}", se.ToString());
             }
             catch (Exception e)
             {
-                Console.WriteLine("Unexpected exception : {0}", e.ToString());
+                Logger.LogError("Unexpected exception : {0}", e.ToString());
             }
         }
 

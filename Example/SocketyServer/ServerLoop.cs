@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace iSocketServer
 {
@@ -49,19 +50,26 @@ namespace iSocketServer
         }
         #endregion
 
+        private ILogger Logger;
         private int PortNumber = 11000;
-        public ServerCore<ServerLoop> serverCore = new ServerCore<ServerLoop>();
+        public ServerCore<ServerLoop> serverCore;
 
         private List<Group> ClientGroups = new List<Group>();
+
+        public ServerLoop(ILogger<ServerLoop> logger)
+        {
+            Logger = logger;
+        }
         private async Task MainLoop()
         {
+            serverCore = new ServerCore<ServerLoop>(Logger);
             //グループを作成
             var group = Group.Create();
             ClientGroups.Add(group);
 
             serverCore.ConnectionReset = (x) =>
             {
-                Console.WriteLine($"{x.Name}さんが切断されました");
+                Logger.LogInformation($"{x.Name}さんが切断されました");
             };
 
             Console.WriteLine("MainLoop Start.");
@@ -80,11 +88,11 @@ namespace iSocketServer
                     try
                     {
                         serverCore.BroadCastNoReturn("Push", null);
-                        Console.WriteLine("Push");
+                        Logger.LogInformation("Push");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.ToString());
+                        Logger.LogInformation(ex.ToString());
                     }
                     cnt = 0;
                 }
@@ -110,7 +118,7 @@ namespace iSocketServer
         public void UdpReceive(ClientInfo sender,byte[] obj)
         {
             string str = Encoding.ASCII.GetString(obj);
-            Console.WriteLine($"UDP Receive sender:{sender.ClientID} data:{str}");
+            Logger.LogInformation($"UDP Receive sender:{sender.ClientID} data:{str}");
         }
     }
 }

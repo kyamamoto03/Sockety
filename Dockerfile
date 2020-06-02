@@ -32,4 +32,4 @@ ENTRYPOINT ["dotnet", "SocketyServer.dll"]
 EXPOSE 11000
 
 # docker build -t kyamamoto03/sockety-server:latest .
-#単体実行は docker run -it --rm -p 12345:12345 -p 5000:80 -e GenbaAppFolder="/genbaapp" -v c:\genbaapp:/genbaapp --name iSocketServer kyamamoto03/iSocketServer:latest /bin/bash    
+#単体実行は docker run -it --rm -p 11000:11000 -p 11000-11200:11000-11200/udp --name SocketyServer kyamamoto03/sockety-server:latest
