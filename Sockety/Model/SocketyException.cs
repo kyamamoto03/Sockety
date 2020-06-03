@@ -6,7 +6,14 @@ namespace Sockety.Model
     {
         public enum SOCKETY_EXCEPTION_ERROR
         {
-            BUFFER_OVER
+            /// <summary>
+            /// バッファサイズオーバ
+            /// </summary>
+            BUFFER_OVER,
+            /// <summary>
+            /// クライアント不明
+            /// </summary>
+            NO_CLIENT
         }
 
         public SOCKETY_EXCEPTION_ERROR SocketyErrorCode { get; private set; }

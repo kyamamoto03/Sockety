@@ -147,7 +147,7 @@ namespace Sockety.Client
                 throw new Exception("Not Connect");
             }
 
-            if (serverSocket.Connected == false)
+            if (clientReceiver.Connected == false)
             {
                 try
                 {

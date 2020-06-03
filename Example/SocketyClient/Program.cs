@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+﻿    using Microsoft.Extensions.Logging;
 using Sockety.Client;
 using Sockety.Model;
 using System;

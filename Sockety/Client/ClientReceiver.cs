@@ -15,6 +15,7 @@ namespace Sockety.Client
         private Socket serverUdpSocket;
         private IPEndPoint serverUdpPort;
 
+        public bool Connected = false;
         /// <summary>
         /// TCPの受信用スレッド
         /// </summary>
@@ -74,6 +75,7 @@ namespace Sockety.Client
             serverUdpSocket = UdpSocket;
             serverUdpPort = UdpEndPort;
             ClientInfo = clientInfo;
+            Connected = true;
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(parent);
@@ -144,7 +146,11 @@ namespace Sockety.Client
                 }
                 catch (Exception ex)
                 {
-                    throw ex;
+                    ////通信切断
+                    //Connected = false;
+                    //Task.Run(() => ConnectionReset?.Invoke());
+                    Connected = false;
+                    return;
                 }
             }
         }
@@ -158,21 +164,38 @@ namespace Sockety.Client
             {
                 try
                 {
-                    int bytesRec = serverSocket.Receive(CommunicateButter);
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
-                    lock (RecieveSyncEvent)
+                    if (serverSocket.Connected == false || Connected == false)
                     {
-                        if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                        Connected = false;
+                        //通信切断
+                        Task.Run(() => ConnectionReset?.Invoke());
+
+                        //受信スレッド終了
+                        return;
+
+                    }
+                    int bytesRec = serverSocket.Receive(CommunicateButter);
+                    if (bytesRec > 0)
+                    {
+                        var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
+                        lock (RecieveSyncEvent)
                         {
-                            ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
-                            ServerResponse = packet.PackData;
-                            RecieveSyncEvent.Set();
+                            if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                            {
+                                ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
+                                ServerResponse = packet.PackData;
+                                RecieveSyncEvent.Set();
+                            }
+                            else
+                            {
+                                ///非同期なので、クライアントメソッドを呼ぶ
+                                InvokeMethod(packet);
+                            }
                         }
-                        else
-                        {
-                            ///非同期なので、クライアントメソッドを呼ぶ
-                            InvokeMethod(packet);
-                        }
+                    }
+                    else
+                    {
+                        Thread.Sleep(100);
                     }
                 }
                 catch (SocketException ex)
@@ -180,6 +203,7 @@ namespace Sockety.Client
                     //通信切断処理
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
+                        Connected = false;
                         //通信切断
                         Task.Run(() => ConnectionReset?.Invoke());
 

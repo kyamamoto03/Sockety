@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using Sockety.Model;
 using Sockety.Service;
 using System;
@@ -23,6 +24,7 @@ namespace Sockety.Server
         /// </summary>
         public Action<ClientInfo> ConnectionReset;
         public bool KillSW = false;
+        private readonly ILogger Logger;
 
         PacketSerivce<T> PacketSerivce;
 
@@ -31,7 +33,8 @@ namespace Sockety.Server
             UdpPort<T> udpPort,
             CancellationTokenSource _stoppingCts,
             T userClass,
-            ServerCore<T> parent)
+            ServerCore<T> parent,
+            ILogger logger)
         {
             this.UserClass = userClass;
             this.serverSocket = _handler;
@@ -39,6 +42,7 @@ namespace Sockety.Server
             this.UdpPort = udpPort;
             this.stoppingCts = _stoppingCts;
             this.Parent = parent;
+            this.Logger = logger;
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(userClass);
@@ -154,6 +158,8 @@ namespace Sockety.Server
                 {
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
+                        Logger.LogInformation($"ReceiveProcess DisConnect:{ClientInfo.ClientID}");
+
                         //クライアント一覧から削除
                         SocketClient<T>.GetInstance().ClientHubs.Remove(this);
                         //通信切断

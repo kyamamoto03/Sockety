@@ -92,13 +92,14 @@ namespace Sockety.Server
                             udpPort: CanUDPConnectPort,
                             _stoppingCts: stoppingCts,
                             userClass: Parent,
-                            parent: this);
+                            parent: this,
+                            logger: Logger);
 
 
                         clientHub.ConnectionReset = ConnectionReset;
                         clientHub.Run();
 
-                        SocketClient<T>.GetInstance().ClientHubs.Add(clientHub);
+                        SocketClient<T>.GetInstance().AddClientHub(clientHub);
                     }
                     catch (Exception ex)
                     {
@@ -163,14 +164,17 @@ namespace Sockety.Server
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
         {
-            var clients = SocketClient<T>.GetInstance().ClientHubs;
-
-            if (clients.Any(x => x.ClientInfo.ClientID == clientInfo.ClientID) == true)
+            lock (SocketClient<T>.GetInstance().ClientHubs)
             {
-                //すでにClientIDがあるので再接続
-                return false;
+                var clients = SocketClient<T>.GetInstance().ClientHubs;
+
+                if (clients.Any(x => x.ClientInfo.ClientID == clientInfo.ClientID) == true)
+                {
+                    //すでにClientIDがあるので再接続
+                    return false;
+                }
+                return true;
             }
-            return true;
         }
 
         /// <summary>
@@ -188,40 +192,42 @@ namespace Sockety.Server
             var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
 
             List<ClientHub<T>> SendLists;
-            if (GroupLists == null)
+            lock (SocketClient<T>.GetInstance().ClientHubs)
             {
-                SendLists = SocketClient<T>.GetInstance().ClientHubs;
-            }
-            else
-            {
-                SendLists = new List<ClientHub<T>>();
-                ///送信先をグループで検索しリストを作成
-                SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+                if (GroupLists == null)
                 {
-                    foreach (var g in GroupLists)
+                    SendLists = SocketClient<T>.GetInstance().ClientHubs;
+                }
+                else
+                {
+                    SendLists = new List<ClientHub<T>>();
+                    ///送信先をグループで検索しリストを作成
+                    SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
                     {
-                        if (x.ClientInfo.JoinGroups.Contains(g) == true)
+                        foreach (var g in GroupLists)
                         {
-                            if (SendLists.Contains(x) == false)
+                            if (x.ClientInfo.JoinGroups.Contains(g) == true)
                             {
-                                SendLists.Add(x);
-                                break;
+                                if (SendLists.Contains(x) == false)
+                                {
+                                    SendLists.Add(x);
+                                    break;
+                                }
                             }
                         }
-                    }
-                });
+                    });
 
-            }
+                }
 
-            SendLists.ForEach(x =>
-            {
-                Task.Run(() =>
+                SendLists.ForEach(x =>
                 {
-                    packets.ForEach(p => x.SendUdp(p));
-                    Thread.Sleep(5);
+                    Task.Run(() =>
+                    {
+                        packets.ForEach(p => x.SendUdp(p));
+                        Thread.Sleep(5);
+                    });
                 });
-            });
-
+            }
         }
 
         /// <summary>
@@ -245,21 +251,24 @@ namespace Sockety.Server
             else
             {
                 SendLists = new List<ClientHub<T>>();
-                ///送信先をグループで検索しリストを作成
-                SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+                lock (SocketClient<T>.GetInstance().ClientHubs)
                 {
-                    foreach (var g in GroupLists)
+                    ///送信先をグループで検索しリストを作成
+                    SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
                     {
-                        if (x.ClientInfo.JoinGroups.Contains(g) == true)
+                        foreach (var g in GroupLists)
                         {
-                            if (SendLists.Contains(x) == false)
+                            if (x.ClientInfo.JoinGroups.Contains(g) == true)
                             {
-                                SendLists.Add(x);
-                                break;
+                                if (SendLists.Contains(x) == false)
+                                {
+                                    SendLists.Add(x);
+                                    break;
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
 
             }
 
@@ -281,15 +290,52 @@ namespace Sockety.Server
                 //切断処理を行う
                 DisConnction.ForEach(x =>
                 {
-                    SocketClient<T>.GetInstance().ClientHubs.Remove(x);
+                    SocketClient<T>.GetInstance().RemoveClientHub(x);
                     x.KillSW = true;
-                    Logger.LogInformation("BroadCastNoReturn DisConnect");
+                    Logger.LogInformation($"BroadCastNoReturn DisConnect:{x.ClientInfo.ClientID}");
 
                     //通信切断
                     Task.Run(() => ConnectionReset?.Invoke(x.ClientInfo));
                 });
             }
 
+        }
+
+        /// <summary>
+        /// 指定したクライアントに送信する
+        /// </summary>
+        /// <param name="SendClient"></param>
+        /// <param name="ClientMethodName"></param>
+        /// <param name="data"></param>
+        public void SendNoReturn(ClientInfo SendClient,string ClientMethodName, byte[] data)
+        {
+            if (data != null && data.Length > SocketySetting.MAX_BUFFER)
+            {
+                throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
+            }
+
+            var SendClientHub = SocketClient<T>.GetInstance().ClientHubs.FirstOrDefault(x => x.ClientInfo.Equals(SendClient));
+            if (SendClientHub != null)
+            {
+                try
+                {
+                    SendClientHub.SendNonReturn(ClientMethodName, data);
+                }
+                catch (SocketException)
+                {
+                    SocketClient<T>.GetInstance().RemoveClientHub(SendClientHub);
+                    SendClientHub.KillSW = true;
+                    Logger.LogInformation($"SendNoReturn DisConnect:{SendClientHub.ClientInfo.ClientID}");
+
+                    //通信切断
+                    Task.Run(() => ConnectionReset?.Invoke(SendClientHub.ClientInfo));
+                }
+            }
+            else
+            {
+                Logger.LogError("NO_CLIENT");
+                throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.NO_CLIENT);
+            }
         }
 
         private ClientInfo ClientInfoReceive(Socket handler)
