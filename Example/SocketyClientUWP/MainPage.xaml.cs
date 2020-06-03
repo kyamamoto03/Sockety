@@ -1,4 +1,5 @@
-﻿using Sockety.Client;
+﻿using Microsoft.Extensions.Logging;
+using Sockety.Client;
 using Sockety.Model;
 using System;
 using System.Text;
@@ -39,9 +40,9 @@ namespace iSocketClientUWP
     {
         public MainPage Parent;
 
-        public void UserJoin(string JoinUserName)
+        public void UserJoin(byte[] JoinUserNameBytes)
         {
-            Console.WriteLine($"Join: {JoinUserName}");
+            Console.WriteLine($"Join: {Encoding.ASCII.GetString(JoinUserNameBytes)}");
         }
 
         public void Push()
@@ -56,7 +57,14 @@ namespace iSocketClientUWP
         Client<Work> client;
         public void Start()
         {
-            client = new Client<Work>();
+            var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                .AddConsole()
+                .AddDebug();
+            });
+            ILogger logger = loggerFactory.CreateLogger<Work>();
+            client = new Client<Work>(logger);
 
 
             ///再接続処理
@@ -72,7 +80,7 @@ namespace iSocketClientUWP
             };
 
             client.Connect("localhost", 11000, "ConsoleApp", this);
-            client.Send("Join", DateTime.Now.ToString());
+            client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
 
             while (true)
             {
