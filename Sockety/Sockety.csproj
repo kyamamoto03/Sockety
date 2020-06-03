@@ -2,9 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.2</Version>
-    <Authors>k.yamamoto</Authors>
+    <Version>0.0.3</Version>
+    <Authors>Kohji Yamamoto</Authors>
     <PackageProjectUrl>https://github.com/kyamamoto03/Sockety</PackageProjectUrl>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <Copyright>Kohji Yamamoto</Copyright>
+    <Company>iforcom</Company>
+    <RepositoryUrl>https://github.com/kyamamoto03/Sockety</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +16,13 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.4" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
