@@ -1,19 +1,17 @@
-﻿using Sockety.Model;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Sockety.Model;
 using Sockety.Server;
-using MessagePack;
-using MessagePack.Resolvers;
-using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 namespace iSocketServer
 {
-    class ServerLoop : IHostedService, IDisposable ,IService
+    class ServerLoop : IHostedService, IDisposable, IService
     {
         #region IHostedService
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
@@ -43,7 +41,7 @@ namespace iSocketServer
         #region IDisposable
         public void Dispose()
         {
-            if (serverCore != null )
+            if (serverCore != null)
             {
                 serverCore.Dispose();
             }
@@ -77,7 +75,7 @@ namespace iSocketServer
             IPAddress ipAddress = IPAddress.Any;
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PortNumber);
 
-            serverCore.Start(localEndPoint, _stoppingCts,this);
+            serverCore.Start(localEndPoint, _stoppingCts, this);
 
             int cnt = 0;
             while (!_stoppingCts.IsCancellationRequested)
@@ -103,11 +101,11 @@ namespace iSocketServer
 
         public byte[] Echo(ClientInfo sendclientInfo, byte[] obj)
         {
-            string data =Encoding.ASCII.GetString(obj);
+            string data = Encoding.ASCII.GetString(obj);
             return Encoding.ASCII.GetBytes($"ServerEcho {data}");
         }
 
-        public void Join(ClientInfo sendclientInfo,byte[] JoinDate)
+        public void Join(ClientInfo sendclientInfo, byte[] JoinDate)
         {
             //Joinしてきたクライアントにグループを追加
             sendclientInfo.JoinGroups.Add(ClientGroups[0]);
@@ -115,7 +113,7 @@ namespace iSocketServer
             serverCore.BroadCastNoReturn("UserJoin", JoinDate, ClientGroups);
         }
 
-        public void UdpReceive(ClientInfo sender,byte[] obj)
+        public void UdpReceive(ClientInfo sender, byte[] obj)
         {
             //ブロードキャスト
             serverCore.BroadCastUDPNoReturn(sender, obj);

@@ -1,7 +1,7 @@
-﻿using Sockety.Client;
+﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using Sockety.Model;
-using MessagePack;
-using Microsoft.Extensions.Hosting;
+using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,13 +10,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
-using Microsoft.Extensions.Logging;
-using Sockety.Service;
 
 namespace Sockety.Server
 {
-    public class ServerCore<T> : IDisposable where T :IService
+    public class ServerCore<T> : IDisposable where T : IService
     {
         #region IDisposable
         public void Dispose()
@@ -43,8 +40,8 @@ namespace Sockety.Server
         {
             Logger = logger;
         }
-            
-        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts,T parent)
+
+        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent)
         {
             Parent = parent;
             stoppingCts = _stoppingCts;
@@ -57,7 +54,8 @@ namespace Sockety.Server
             MainListener.Listen(10);
 
 
-            Task.Run(async () => { 
+            Task.Run(async () =>
+            {
                 //クライアント接続スレッド
                 while (!stoppingCts.IsCancellationRequested)
                 {
@@ -101,7 +99,8 @@ namespace Sockety.Server
                         clientHub.Run();
 
                         SocketClient<T>.GetInstance().ClientHubs.Add(clientHub);
-                    }catch(Exception ex)
+                    }
+                    catch (Exception ex)
                     {
                         Console.WriteLine(ex.ToString());
                     }
@@ -114,7 +113,7 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        internal (Socket s , IPEndPoint p) UdpConnect(int PortNumber)
+        internal (Socket s, IPEndPoint p) UdpConnect(int PortNumber)
         {
             var WaitingServerAddress = IPAddress.Any;
             IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
@@ -151,12 +150,12 @@ namespace Sockety.Server
                     PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
 
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     throw ex;
                 }
-            } 
-            
+            }
+
             var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 
             return (PunchingSocket, PunchingPoint);
@@ -230,7 +229,7 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="ClientMethodName"></param>
         /// <param name="data"></param>
-        public void BroadCastNoReturn(string ClientMethodName,byte[] data, List<Group> GroupLists = null)
+        public void BroadCastNoReturn(string ClientMethodName, byte[] data, List<Group> GroupLists = null)
         {
             if (data != null && data.Length > SocketySetting.MAX_BUFFER)
             {
@@ -280,7 +279,8 @@ namespace Sockety.Server
             if (DisConnction.Count > 0)
             {
                 //切断処理を行う
-                DisConnction.ForEach(x => { 
+                DisConnction.ForEach(x =>
+                {
                     SocketClient<T>.GetInstance().ClientHubs.Remove(x);
                     x.KillSW = true;
                     Logger.LogInformation("BroadCastNoReturn DisConnect");

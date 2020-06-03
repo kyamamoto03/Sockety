@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Sockety.Model
+﻿namespace Sockety.Model
 {
     public interface IService
     {
-        void UdpReceive(ClientInfo clientInfo,byte[] obj);
+        void UdpReceive(ClientInfo clientInfo, byte[] obj);
     }
 }

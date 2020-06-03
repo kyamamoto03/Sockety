@@ -1,19 +1,17 @@
-﻿using Sockety.Model;
-using MessagePack;
+﻿using MessagePack;
+using Microsoft.Extensions.Logging;
+using Sockety.Model;
+using Sockety.Service;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection.Emit;
 using System.Text;
-using Sockety.Service;
 using System.Threading;
-using Microsoft.Extensions.Logging;
 
 namespace Sockety.Client
 {
-    public class Client<T> : IDisposable where T:IService 
+    public class Client<T> : IDisposable where T : IService
     {
         private Socket serverSocket;
         private ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
@@ -35,7 +33,7 @@ namespace Sockety.Client
         /// <param name="PortNumber"></param>
         /// <param name="UserName"></param>
         /// <param name="parent"></param>
-        public void Connect(string ServerHost, int PortNumber,string UserName,object parent)
+        public void Connect(string ServerHost, int PortNumber, string UserName, object parent)
         {
             this.ServerHost = ServerHost;
 
@@ -44,10 +42,10 @@ namespace Sockety.Client
 
 
             IPAddress host;
-            if (IPAddress.TryParse(ServerHost,out host) == false)
+            if (IPAddress.TryParse(ServerHost, out host) == false)
             {
                 IPHostEntry ipHostInfo = Dns.GetHostEntry(ServerHost);
-                 host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                host = ipHostInfo.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
             }
             else
             {
@@ -56,7 +54,7 @@ namespace Sockety.Client
             ServerEndPoint = new IPEndPoint(host, PortNumber);
 
             // Create a TCP/IP  socket.  
-            serverSocket = new Socket(ServerEndPoint.AddressFamily,SocketType.Stream, ProtocolType.Tcp);
+            serverSocket = new Socket(ServerEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
             try
             {
@@ -75,7 +73,7 @@ namespace Sockety.Client
                 var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort());
 
                 //受信スレッド作成
-                clientReceiver.Run(handler:  serverSocket,
+                clientReceiver.Run(handler: serverSocket,
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
                     clientInfo: clientInfo,
@@ -102,7 +100,7 @@ namespace Sockety.Client
         /// <param name="ServerHost"></param>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        private (Socket socket, IPEndPoint point) ConnectUdp(string ServerHost,int PortNumber)
+        private (Socket socket, IPEndPoint point) ConnectUdp(string ServerHost, int PortNumber)
         {
             var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -179,7 +177,7 @@ namespace Sockety.Client
                     }
                     throw ex;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     throw ex;
                 }
@@ -246,9 +244,10 @@ namespace Sockety.Client
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
             //パケット分割
-            var packets = PacketSerivce<T>.PacketSplit(clientInfo,data);
+            var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
 
-            packets.ForEach(x => {
+            packets.ForEach(x =>
+            {
                 clientReceiver.UdpSend(x);
                 Thread.Sleep(5);
             });

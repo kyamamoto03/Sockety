@@ -1,8 +1,8 @@
-﻿using System;
-using System.Text;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Sockety.Client;
 using Sockety.Model;
+using System;
+using System.Text;
 
 namespace iSocketClient
 {
@@ -52,7 +52,7 @@ namespace iSocketClient
                 }
             };
 
-            client.Connect("localhost", 11000,"ConsoleApp",this);
+            client.Connect("localhost", 11000, "ConsoleApp", this);
             client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             var echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
@@ -67,7 +67,7 @@ namespace iSocketClient
             }
         }
 
-        public void UdpReceive(ClientInfo clientInfo,byte[] obj)
+        public void UdpReceive(ClientInfo clientInfo, byte[] obj)
         {
             string str = Encoding.ASCII.GetString(obj);
 

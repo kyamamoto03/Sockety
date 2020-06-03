@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Sockety.Service
 {
@@ -19,7 +18,7 @@ namespace Sockety.Service
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        internal static List<SocketyPacketUDP> PacketSplit(ClientInfo clientInfo,byte[] data)
+        internal static List<SocketyPacketUDP> PacketSplit(ClientInfo clientInfo, byte[] data)
         {
             List<SocketyPacketUDP> ret = new List<SocketyPacketUDP>();
             var packetID = Guid.NewGuid();
@@ -29,7 +28,7 @@ namespace Sockety.Service
             int packetNo = 0;
             do
             {
-                var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID,PacketNo = packetNo + 1 };
+                var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = packetNo + 1 };
 
                 int size;
                 if (SocketySetting.UDP_SPLIT_SIZE < data.Length - index)

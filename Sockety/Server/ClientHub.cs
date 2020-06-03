@@ -1,14 +1,10 @@
-﻿using Sockety.Client;
+﻿using MessagePack;
 using Sockety.Model;
-using MessagePack;
+using Sockety.Service;
 using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
-using Sockety.Service;
 
 namespace Sockety.Server
 {
@@ -30,12 +26,12 @@ namespace Sockety.Server
 
         PacketSerivce<T> PacketSerivce;
 
-        public ClientHub(Socket _handler, 
-            ClientInfo _clientInfo, 
-            UdpPort<T> udpPort, 
+        public ClientHub(Socket _handler,
+            ClientInfo _clientInfo,
+            UdpPort<T> udpPort,
             CancellationTokenSource _stoppingCts,
             T userClass,
-            ServerCore<T>parent)
+            ServerCore<T> parent)
         {
             this.UserClass = userClass;
             this.serverSocket = _handler;
@@ -58,7 +54,7 @@ namespace Sockety.Server
             }
         }
 
-       
+
         internal void SendNonReturn(string ClientMethodName, byte[] data)
         {
             try
@@ -66,10 +62,12 @@ namespace Sockety.Server
                 var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                 var d = MessagePackSerializer.Serialize(packet);
                 serverSocket.Send(d);
-            }catch(SocketException ex)
+            }
+            catch (SocketException ex)
             {
                 throw ex;
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 throw ex;
             }
@@ -107,7 +105,8 @@ namespace Sockety.Server
                 try
                 {
                     int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
-                    Task.Run(() => { 
+                    Task.Run(() =>
+                    {
                         var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateButter);
 
                         //親クラスを呼び出す
@@ -121,7 +120,8 @@ namespace Sockety.Server
                         //終了フラグが立ってるので、スレッドを終了する
                         return;
                     }
-                }catch(Exception ex)
+                }
+                catch (Exception ex)
                 {
                     throw ex;
                 }
@@ -180,7 +180,7 @@ namespace Sockety.Server
             {
                 throw new Exception("not found Method");
             }
-            byte[] ret = (byte[])await Task.Run(() => method.Invoke(UserClass, new object[] {ClientInfo, packet.PackData }));
+            byte[] ret = (byte[])await Task.Run(() => method.Invoke(UserClass, new object[] { ClientInfo, packet.PackData }));
 
             return ret;
         }

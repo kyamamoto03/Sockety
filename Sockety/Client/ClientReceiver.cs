@@ -1,17 +1,15 @@
-﻿using Sockety.Model;
-using MessagePack;
+﻿using MessagePack;
+using Sockety.Model;
+using Sockety.Service;
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Sockety.Service;
 
 namespace Sockety.Client
 {
-    internal class ClientReceiver<T>: IDisposable where T: IService
+    internal class ClientReceiver<T> : IDisposable where T : IService
     {
         private Socket serverSocket = null;
         private Socket serverUdpSocket;
@@ -69,7 +67,7 @@ namespace Sockety.Client
         }
 
 
-        internal void Run(Socket handler,Socket UdpSocket,IPEndPoint UdpEndPort,ClientInfo clientInfo, T parent)
+        internal void Run(Socket handler, Socket UdpSocket, IPEndPoint UdpEndPort, ClientInfo clientInfo, T parent)
         {
             Parent = parent;
             serverSocket = handler;
@@ -109,7 +107,7 @@ namespace Sockety.Client
         /// <param name="serverMethodName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        internal byte[] Send(string serverMethodName,byte[] data)
+        internal byte[] Send(string serverMethodName, byte[] data)
         {
             if (serverSocket == null || serverSocket.Connected == false)
             {
@@ -120,7 +118,7 @@ namespace Sockety.Client
             {
                 ServerCallMethodName = serverMethodName;
             }
-            SocketyPacket packet = new SocketyPacket {MethodName = serverMethodName,clientInfo = ClientInfo, PackData = data };
+            SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data };
             RecieveSyncEvent.Reset();
             serverSocket.Send(MessagePackSerializer.Serialize(packet));
             RecieveSyncEvent.WaitOne();
@@ -135,7 +133,7 @@ namespace Sockety.Client
         {
             var CommunicateBuffer = new byte[SocketySetting.MAX_BUFFER];
 
-            while(true)
+            while (true)
             {
                 try
                 {
@@ -144,7 +142,7 @@ namespace Sockety.Client
 
                     Task.Run(() => PacketSerivce.ReceiverSocketyPacketUDP(packet));
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     throw ex;
                 }
@@ -176,8 +174,9 @@ namespace Sockety.Client
                             InvokeMethod(packet);
                         }
                     }
-                }catch(SocketException ex)
-                { 
+                }
+                catch (SocketException ex)
+                {
                     //通信切断処理
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
@@ -187,7 +186,8 @@ namespace Sockety.Client
                         //受信スレッド終了
                         return;
                     }
-                }catch(Exception ex)
+                }
+                catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
                 }
