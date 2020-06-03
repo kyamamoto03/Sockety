@@ -33,12 +33,12 @@ namespace Sockety.Client
         /// <param name="PortNumber"></param>
         /// <param name="UserName"></param>
         /// <param name="parent"></param>
-        public void Connect(string ServerHost, int PortNumber, string UserName, object parent)
+        public void Connect(string ServerHost, int PortNumber, string UserName, T parent)
         {
             this.ServerHost = ServerHost;
 
             clientReceiver.ConnectionReset = ConnectionReset;
-            Parent = (T)parent;
+            Parent = parent;
 
 
             IPAddress host;
