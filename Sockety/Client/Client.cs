@@ -228,6 +228,10 @@ namespace Sockety.Client
         /// <returns></returns>
         public byte[] Send(string serverMethodName, byte[] data)
         {
+            if (data != null && data.Length > SocketySetting.MAX_BUFFER)
+            {
+                throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
+            }
             return clientReceiver.Send(serverMethodName, data);
         }
 
@@ -237,6 +241,10 @@ namespace Sockety.Client
         /// <param name="data"></param>
         public void UdpSend(byte[] data)
         {
+            if (data != null && data.Length > SocketySetting.MAX_UDP_SIZE)
+            {
+                throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
+            }
             //パケット分割
             var packets = PacketSerivce<T>.PacketSplit(clientInfo,data);
 

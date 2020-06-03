@@ -180,10 +180,13 @@ namespace Sockety.Server
         /// <param name="data"></param>
         public void BroadCastUDPNoReturn(ClientInfo clientInfo, byte[] data, List<Group> GroupLists = null)
         {
+            if (data != null && data.Length > SocketySetting.MAX_UDP_SIZE)
+            {
+                throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
+            }
+
             //パケット分割
             var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
-
-
 
             List<ClientHub<T>> SendLists;
             if (GroupLists == null)
@@ -229,6 +232,10 @@ namespace Sockety.Server
         /// <param name="data"></param>
         public void BroadCastNoReturn(string ClientMethodName,byte[] data, List<Group> GroupLists = null)
         {
+            if (data != null && data.Length > SocketySetting.MAX_BUFFER)
+            {
+                throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
+            }
             List<ClientHub<T>> DisConnction = new List<ClientHub<T>>();
 
             List<ClientHub<T>> SendLists;

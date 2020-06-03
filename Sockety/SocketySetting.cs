@@ -8,6 +8,10 @@
         public static int MAX_BUFFER = 1000000;
 
         /// <summary>
+        /// UDPの送信最大サイズ
+        /// </summary>
+        public static int MAX_UDP_SIZE = 1000000;
+        /// <summary>
         /// UDPのバケット分割サイズ
         /// </summary>
         public static int UDP_SPLIT_SIZE = 30000;
