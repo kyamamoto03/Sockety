@@ -2,13 +2,14 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <Authors>Kohji Yamamoto</Authors>
     <PackageProjectUrl>https://github.com/kyamamoto03/Sockety</PackageProjectUrl>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <Copyright>Kohji Yamamoto</Copyright>
     <Company>iforcom</Company>
     <RepositoryUrl>https://github.com/kyamamoto03/Sockety</RepositoryUrl>
+    <Description>.Net Coreネイティブ　ネットワークフレームワーク</Description>
   </PropertyGroup>
 
   <ItemGroup>

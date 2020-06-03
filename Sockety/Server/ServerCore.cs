@@ -224,7 +224,7 @@ namespace Sockety.Server
                     Task.Run(() =>
                     {
                         packets.ForEach(p => x.SendUdp(p));
-                        Thread.Sleep(5);
+                        //Thread.Sleep(5);
                     });
                 });
             }
