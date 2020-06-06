@@ -90,7 +90,6 @@ namespace Sockety.Server
                         var clientHub = new ClientHub<T>(_handler: handler,
                             _clientInfo: clientInfo,
                             udpPort: CanUDPConnectPort,
-                            _stoppingCts: stoppingCts,
                             userClass: Parent,
                             parent: this,
                             logger: Logger);

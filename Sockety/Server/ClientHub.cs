@@ -13,10 +13,8 @@ namespace Sockety.Server
     {
         private Socket serverSocket = null;
         private Thread TcpThread;
-        private Thread UdpThread;
         public ClientInfo ClientInfo { get; private set; }
         private T UserClass;
-        private CancellationTokenSource stoppingCts;
         private UdpPort<T> UdpPort;
         private ServerCore<T> Parent;
         /// <summary>
@@ -31,7 +29,6 @@ namespace Sockety.Server
         public ClientHub(Socket _handler,
             ClientInfo _clientInfo,
             UdpPort<T> udpPort,
-            CancellationTokenSource _stoppingCts,
             T userClass,
             ServerCore<T> parent,
             ILogger logger)
@@ -40,7 +37,6 @@ namespace Sockety.Server
             this.serverSocket = _handler;
             this.ClientInfo = _clientInfo;
             this.UdpPort = udpPort;
-            this.stoppingCts = _stoppingCts;
             this.Parent = parent;
             this.Logger = logger;
 
@@ -91,44 +87,56 @@ namespace Sockety.Server
             }
         }
 
+        public class StateObject
+        {
+            // Client socket.  
+            public Socket workSocket = null;
+            // Receive buffer.  
+            public byte[] Buffer;
+        }
+
         public void Run()
         {
             TcpThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpThread.Start();
 
-            UdpThread = new Thread(new ThreadStart(UdpReceiveProcess));
-            UdpThread.Start();
+            //UDPの受信を開始
+            var UdpStateObject = new StateObject() { 
+                Buffer = new byte[SocketySetting.MAX_BUFFER], 
+                workSocket = UdpPort.PunchingSocket };
+
+            UdpPort.PunchingSocket.BeginReceive(UdpStateObject.Buffer, 0, UdpStateObject.Buffer.Length, 0, new AsyncCallback(UdpReceiver), UdpStateObject);
         }
 
-        private void UdpReceiveProcess()
+        /// <summary>
+        /// UDP受信
+        /// </summary>
+        /// <param name="ar"></param>
+        private void UdpReceiver(IAsyncResult ar)
         {
-            byte[] CommunicateButter = new byte[SocketySetting.MAX_BUFFER];
-            UdpPort.PunchingSocket.ReceiveTimeout = 5000;
-            while (!KillSW)
+            try
             {
-                try
+                StateObject state = (StateObject)ar.AsyncState;
+                Socket client = state.workSocket;
+                int bytesRead = client.EndReceive(ar);
+                if (bytesRead > 0)
                 {
-                    int cnt = UdpPort.PunchingSocket.Receive(CommunicateButter);
                     Task.Run(() =>
                     {
-                        var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateButter);
+                        var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(state.Buffer);
 
                         //親クラスを呼び出す
                         PacketSerivce.ReceiverSocketyPacketUDP(packet);
                     });
+
+                    //  受信を再スタート  
+                    client.BeginReceive(state.Buffer, 0, state.Buffer.Length, 0,
+                        new AsyncCallback(UdpReceiver), state);
                 }
-                catch (SocketException ex)
-                {
-                    if (ex.SocketErrorCode == SocketError.TimedOut && stoppingCts.IsCancellationRequested == true)
-                    {
-                        //終了フラグが立ってるので、スレッドを終了する
-                        return;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
         }
 
