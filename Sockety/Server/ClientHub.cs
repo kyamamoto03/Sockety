@@ -61,7 +61,10 @@ namespace Sockety.Server
             {
                 var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                 var d = MessagePackSerializer.Serialize(packet);
-                serverSocket.Send(d);
+                var sizeb = BitConverter.GetBytes(d.Length);
+                serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+                Console.WriteLine($"SendSize:{d.Length}");
+                serverSocket.Send(d,d.Length,SocketFlags.None);
             }
             catch (SocketException ex)
             {
@@ -145,7 +148,7 @@ namespace Sockety.Server
         /// </summary>
         private async void ReceiveProcess()
         {
-            byte[] CommunicateButter = new byte[SocketySetting.MAX_BUFFER];
+            byte[] sizeb = new byte[sizeof(int)];
             while (!KillSW)
             {
                 try
@@ -154,13 +157,24 @@ namespace Sockety.Server
                     {
                         return;
                     }
-                    int bytesRec = serverSocket.Receive(CommunicateButter);
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
+
+                    int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
+                    int size = BitConverter.ToInt32(sizeb, 0);
+
+                    byte[] buffer = new byte[size];
+                    bytesRec = serverSocket.Receive(buffer, size, SocketFlags.None);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
 
                     //メソッドの戻り値を詰め替える
                     packet.PackData = await InvokeMethodAsync(packet);
-                    //送り返す
-                    serverSocket.Send(MessagePackSerializer.Serialize(packet));
+
+
+                    //InvokeMethodAsyncの戻り値を送り返す
+                    var d = MessagePackSerializer.Serialize(packet);
+                    sizeb = BitConverter.GetBytes(d.Length);
+                    serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+
+                    serverSocket.Send(d, d.Length, SocketFlags.None);
                 }
                 catch (SocketException ex)
                 {

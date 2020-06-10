@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using Sockety.Model;
 using Sockety.Service;
 using System;
@@ -25,7 +26,6 @@ namespace Sockety.Client
         /// </summary>
         private Thread UdpReceiveThread;
 
-        private byte[] CommunicateButter = new byte[SocketySetting.MAX_BUFFER];
         /// <summary>
         /// 通信が切断時に発火
         /// </summary>
@@ -122,7 +122,12 @@ namespace Sockety.Client
             }
             SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data };
             RecieveSyncEvent.Reset();
-            serverSocket.Send(MessagePackSerializer.Serialize(packet));
+
+            var d = MessagePackSerializer.Serialize(packet);
+            var sizeb = BitConverter.GetBytes(d.Length);
+            serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+
+            serverSocket.Send(d,d.Length,SocketFlags.None);
             RecieveSyncEvent.WaitOne();
 
             return ServerResponse;
@@ -160,6 +165,7 @@ namespace Sockety.Client
         /// </summary>
         private void ReceiveProcess()
         {
+            byte[] sizeb = new byte[sizeof(int)];
             while (true)
             {
                 try
@@ -174,10 +180,16 @@ namespace Sockety.Client
                         return;
 
                     }
-                    int bytesRec = serverSocket.Receive(CommunicateButter);
+                    int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
+                    int size = BitConverter.ToInt32(sizeb, 0);
+
+                    Console.WriteLine($"ReceiveSize: {size}");
+                    var buffer = new byte[size];
+
+                    bytesRec = serverSocket.Receive(buffer, size,SocketFlags.None);
                     if (bytesRec > 0)
                     {
-                        var packet = MessagePackSerializer.Deserialize<SocketyPacket>(CommunicateButter);
+                        var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
                         lock (RecieveSyncEvent)
                         {
                             if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
