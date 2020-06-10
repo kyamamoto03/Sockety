@@ -52,7 +52,15 @@ namespace iSocketClient
                 }
             };
 
-            client.Connect("localhost", 11000, "ConsoleApp", this);
+            try
+            {
+                client.Connect("localhost", 11000, "ConsoleApp", this);
+            }catch(Exception e)
+            {
+                Console.WriteLine(e.ToString());
+                Console.ReadLine();
+                return;
+            }
             client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             var echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");

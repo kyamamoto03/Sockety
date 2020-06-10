@@ -83,14 +83,17 @@ namespace Sockety.Client
             catch (ArgumentNullException ane)
             {
                 Logger.LogError("ArgumentNullException : {0}", ane.ToString());
+                throw ane;
             }
             catch (SocketException se)
             {
                 Logger.LogError("SocketException : {0}", se.ToString());
+                throw se;
             }
             catch (Exception e)
             {
                 Logger.LogError("Unexpected exception : {0}", e.ToString());
+                throw e;
             }
         }
 
