@@ -64,6 +64,7 @@ namespace Sockety.Server
                 var sizeb = BitConverter.GetBytes(d.Length);
                 serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
                 serverSocket.Send(d,d.Length,SocketFlags.None);
+
             }
             catch (SocketException ex)
             {
@@ -167,7 +168,17 @@ namespace Sockety.Server
                     int size = BitConverter.ToInt32(sizeb, 0);
 
                     byte[] buffer = new byte[size];
-                    bytesRec = serverSocket.Receive(buffer, size, SocketFlags.None);
+                    int DataSize = 0;
+                    do
+                    {
+
+                        bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
+                        //Logger.LogInformation($"ReceiveProcess: size={size},bytesRec={bytesRec}");
+
+                        DataSize += bytesRec;
+
+                    } while (size > DataSize);
+
                     var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
 
                     //メソッドの戻り値を詰め替える

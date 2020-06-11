@@ -186,7 +186,17 @@ namespace Sockety.Client
                     Console.WriteLine($"ReceiveSize: {size}");
                     var buffer = new byte[size];
 
-                    bytesRec = serverSocket.Receive(buffer, size,SocketFlags.None);
+                    int DataSize = 0;
+                    do
+                    {
+
+                        bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
+                        Console.WriteLine($"ReceiveProcess: size={size},bytesRec={bytesRec}");
+
+                        DataSize += bytesRec;
+
+                    } while (size > DataSize);
+
                     if (bytesRec > 0)
                     {
                         var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
