@@ -63,7 +63,6 @@ namespace Sockety.Server
                 var d = MessagePackSerializer.Serialize(packet);
                 var sizeb = BitConverter.GetBytes(d.Length);
                 serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-                Console.WriteLine($"SendSize:{d.Length}");
                 serverSocket.Send(d,d.Length,SocketFlags.None);
             }
             catch (SocketException ex)
@@ -159,6 +158,12 @@ namespace Sockety.Server
                     }
 
                     int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
+                    if (bytesRec == 0)
+                    {
+                        await DisConnect();
+                        //受信スレッド終了
+                        return;
+                    }
                     int size = BitConverter.ToInt32(sizeb, 0);
 
                     byte[] buffer = new byte[size];
@@ -180,12 +185,7 @@ namespace Sockety.Server
                 {
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
-                        Logger.LogInformation($"ReceiveProcess DisConnect:{ClientInfo.ClientID}");
-
-                        //クライアント一覧から削除
-                        SocketClient<T>.GetInstance().ClientHubs.Remove(this);
-                        //通信切断
-                        await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
+                        await DisConnect();
 
                         //受信スレッド終了
                         return;
@@ -197,6 +197,20 @@ namespace Sockety.Server
                 }
                 Thread.Sleep(10);
             }
+        }
+
+        /// <summary>
+        /// クライアント起因による切断処理
+        /// </summary>
+        /// <returns></returns>
+        private async Task DisConnect()
+        {
+            Logger.LogInformation($"ReceiveProcess DisConnect:{ClientInfo.ClientID}");
+
+            //クライアント一覧から削除
+            SocketClient<T>.GetInstance().ClientHubs.Remove(this);
+            //通信切断
+            await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
         }
 
         private async Task<byte[]> InvokeMethodAsync(SocketyPacket packet)
