@@ -42,6 +42,8 @@ namespace Sockety.Server
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(userClass);
+
+            MakeHeartBeat();
         }
 
         public void Dispose()
@@ -54,17 +56,55 @@ namespace Sockety.Server
             }
         }
 
+        #region HeartBeat
+        private void MakeHeartBeat()
+        {
+            Task.Run(() =>
+            {
+                while(true)
+                {
+                    SendHeartBeat();
+                    Thread.Sleep(1000);
+                }
+            });
+        }
+        private void SendHeartBeat()
+        {
+            try
+            {
+                lock (serverSocket)
+                {
+                    var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
+                    var d = MessagePackSerializer.Serialize(packet);
+                    var sizeb = BitConverter.GetBytes(d.Length);
+                    serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+                    serverSocket.Send(d, d.Length, SocketFlags.None);
+                }
+            }
+            catch (SocketException ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        #endregion
 
         internal void SendNonReturn(string ClientMethodName, byte[] data)
         {
             try
             {
-                var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
-                var d = MessagePackSerializer.Serialize(packet);
-                var sizeb = BitConverter.GetBytes(d.Length);
-                serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-                serverSocket.Send(d,d.Length,SocketFlags.None);
-
+                lock (serverSocket)
+                {
+                    var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
+                    var d = MessagePackSerializer.Serialize(packet);
+                    var sizeb = BitConverter.GetBytes(d.Length);
+                    serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+                    serverSocket.Send(d, d.Length, SocketFlags.None);
+                }
             }
             catch (SocketException ex)
             {
@@ -80,9 +120,11 @@ namespace Sockety.Server
         {
             try
             {
-                var bytes = MessagePackSerializer.Serialize(packet);
-                UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
-
+                lock (UdpPort.PunchingSocket)
+                {
+                    var bytes = MessagePackSerializer.Serialize(packet);
+                    UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
+                }
             }
             catch (Exception ex)
             {

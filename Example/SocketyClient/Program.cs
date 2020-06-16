@@ -69,8 +69,8 @@ namespace iSocketClient
             {
                 //var ret = (string)client.Send("Echo", DateTime.Now.ToString());
                 //Console.WriteLine(ret);
-                var t = Encoding.ASCII.GetBytes("UDP Test");
-                client.UdpSend(t);
+                //var t = Encoding.ASCII.GetBytes("UDP Test");
+                //client.UdpSend(t);
                 System.Threading.Thread.Sleep(2000);
             }
         }

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Sockety.Model;
 using Sockety.Service;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -85,6 +87,8 @@ namespace Sockety.Client
 
             UdpReceiveThread = new Thread(new ThreadStart(UdpReceiveProcess));
             UdpReceiveThread.Start();
+
+            SurveillanceHeartBeat();
         }
 
         /// <summary>
@@ -172,29 +176,34 @@ namespace Sockety.Client
                 {
                     if (serverSocket.Connected == false || Connected == false)
                     {
-                        Connected = false;
-                        //通信切断
-                        Task.Run(() => ConnectionReset?.Invoke());
+                        ConnectionLost();
 
                         //受信スレッド終了
                         return;
 
                     }
+                    //データサイズ受信
                     int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
                     int size = BitConverter.ToInt32(sizeb, 0);
 
-                    Console.WriteLine($"ReceiveSize: {size}");
+                    //データ領域確保
                     var buffer = new byte[size];
 
                     int DataSize = 0;
                     do
                     {
+                        if (serverSocket.Connected == false || Connected == false)
+                        {
+                            Console.WriteLine("Break");
+                            return;
+                        }
+                        else
+                        {
+                            //データ受信
+                            bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
 
-                        bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
-                        Console.WriteLine($"ReceiveProcess: size={size},bytesRec={bytesRec}");
-
-                        DataSize += bytesRec;
-
+                            DataSize += bytesRec;
+                        }
                     } while (size > DataSize);
 
                     if (bytesRec > 0)
@@ -202,16 +211,24 @@ namespace Sockety.Client
                         var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
                         lock (RecieveSyncEvent)
                         {
-                            if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
                             {
-                                ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
-                                ServerResponse = packet.PackData;
-                                RecieveSyncEvent.Set();
+                                ReceiveHeartBeat();
                             }
                             else
                             {
-                                ///非同期なので、クライアントメソッドを呼ぶ
-                                InvokeMethod(packet);
+
+                                if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                                {
+                                    ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
+                                    ServerResponse = packet.PackData;
+                                    RecieveSyncEvent.Set();
+                                }
+                                else
+                                {
+                                    ///非同期なので、クライアントメソッドを呼ぶ
+                                    InvokeMethod(packet);
+                                }
                             }
                         }
                     }
@@ -225,9 +242,7 @@ namespace Sockety.Client
                     //通信切断処理
                     if (ex.SocketErrorCode == SocketError.ConnectionReset)
                     {
-                        Connected = false;
-                        //通信切断
-                        Task.Run(() => ConnectionReset?.Invoke());
+                        ConnectionLost();
 
                         //受信スレッド終了
                         return;
@@ -240,7 +255,58 @@ namespace Sockety.Client
                 Thread.Sleep(10);
             }
         }
+        private void ConnectionLost()
+        {
+            Connected = false;
+            //再切断呼び出し
+            Task.Run(() => ConnectionReset?.Invoke());
+        }
 
+        #region HeartBeat
+        public List<HeartBeat> ReceiveHeartBeats = new List<HeartBeat>();
+        /// <summary>
+        /// HeartBeat受信処理
+        /// </summary>
+        private void ReceiveHeartBeat()
+        {
+            lock (ReceiveHeartBeats)
+            {
+                ReceiveHeartBeats.Add(new HeartBeat { ReceiveDate = DateTime.Now });
+            }
+        }
+
+        private void SurveillanceHeartBeat()
+        {
+            lock (ReceiveHeartBeats)
+            {
+                ReceiveHeartBeats.Clear();
+            }
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    lock (ReceiveHeartBeats)
+                    {
+                        var LastHeartBeat = ReceiveHeartBeats.OrderByDescending(x => x.ReceiveDate).FirstOrDefault();
+                        if(LastHeartBeat != null)
+                        {
+                            var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
+                            if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
+                            {
+                                Console.WriteLine("ConnectionLost");
+                                ConnectionLost();
+                                //監視終了
+                                return;
+                            }
+                        }
+                    }
+
+                    Thread.Sleep(5000);
+                }
+            });
+        }
+
+        #endregion
         /// <summary>
         /// SocketyPacket.MethodNameのメソッド呼び出し
         /// </summary>
