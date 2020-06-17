@@ -170,15 +170,17 @@ namespace Sockety.Client
                         UdpEndPort: UdpInfo.point,
                         clientInfo: clientInfo,
                         Parent);
+                    Logger.LogInformation("ReConnect");
                 }
                 catch (SocketException ex)
                 {
-                    if (ex.SocketErrorCode == SocketError.ConnectionRefused)
-                    {
-                        //いまだ接続できず
-                        return false;
-                    }
-                    throw ex;
+                    //if (ex.SocketErrorCode == SocketError.ConnectionRefused)
+                    //{
+                    //    //いまだ接続できず
+                    //    return false;
+                    //}
+                    //throw ex;
+                    return false;
                 }
                 catch (Exception ex)
                 {
