@@ -59,16 +59,16 @@ namespace Sockety.Server
         #region HeartBeat
         private void MakeHeartBeat()
         {
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                while(true)
+                while(serverSocket != null)
                 {
-                    SendHeartBeat();
+                    await SendHeartBeat();
                     Thread.Sleep(1000);
                 }
             });
         }
-        private void SendHeartBeat()
+        private async Task SendHeartBeat()
         {
             try
             {
@@ -83,7 +83,8 @@ namespace Sockety.Server
             }
             catch (SocketException ex)
             {
-                throw ex;
+                Console.WriteLine("SendHeartBeat:DisConnect");
+                await DisConnect();
             }
             catch (Exception ex)
             {
@@ -262,6 +263,7 @@ namespace Sockety.Server
 
             //クライアント一覧から削除
             SocketClient<T>.GetInstance().ClientHubs.Remove(this);
+            serverSocket = null;
             //通信切断
             await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
         }
