@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace iSocketServer
+namespace SocketyServer
 {
     class ServerLoop : IHostedService, IDisposable, IService
     {
@@ -85,8 +85,8 @@ namespace iSocketServer
                 {
                     try
                     {
-                        serverCore.BroadCastNoReturn("Push", null);
-                        Logger.LogInformation("Push");
+                        //serverCore.BroadCastNoReturn("Push", null);
+                        //Logger.LogInformation("Push");
                     }
                     catch (Exception ex)
                     {

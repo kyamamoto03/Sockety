@@ -15,5 +15,7 @@
         /// UDPのバケット分割サイズ
         /// </summary>
         public static int UDP_SPLIT_SIZE = 30000;
+
+        public static int HEART_BEAT_LOST_TIME = 10000;
     }
 }
