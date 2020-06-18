@@ -192,6 +192,7 @@ namespace Sockety.Server
         private async void ReceiveProcess()
         {
             byte[] sizeb = new byte[sizeof(int)];
+
             while (!KillSW)
             {
                 try
