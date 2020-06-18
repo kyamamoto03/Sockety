@@ -21,6 +21,8 @@ namespace Sockety.Client
         public Action ConnectionReset;
         private string ServerHost;
         private ILogger Logger;
+        private int PortNumber;
+        private string UserName;
 
         public Client(ILogger logger)
         {
@@ -33,14 +35,38 @@ namespace Sockety.Client
         /// <param name="PortNumber"></param>
         /// <param name="UserName"></param>
         /// <param name="parent"></param>
-        public void Connect(string ServerHost, int PortNumber, string UserName, T parent)
+        public bool Connect(string ServerHost, int portNumber, string userName, T parent)
         {
             this.ServerHost = ServerHost;
-
+            this.PortNumber = portNumber;
+            this.UserName = userName;
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = parent;
 
+            return ConnectProcess(CONNECT_TYPE.NEW_CONNECT);
+        }
 
+        /// <summary>
+        /// 再接続処理
+        /// </summary>
+        /// <returns></returns>
+        public bool ReConnect()
+        {
+            if (ServerEndPoint == null)
+            {
+                //一度も接続していない
+                throw new Exception("Not Connect");
+            }
+
+            if (clientReceiver.Connected == false)
+            {
+                return ConnectProcess(CONNECT_TYPE.RE_CONNECT);
+            }
+            return false;
+        }
+
+        private bool ConnectProcess(CONNECT_TYPE ConnectType)
+        {
             IPAddress host;
             if (IPAddress.TryParse(ServerHost, out host) == false)
             {
@@ -87,16 +113,25 @@ namespace Sockety.Client
             }
             catch (SocketException se)
             {
-                Logger.LogError("SocketException : {0}", se.ToString());
-                throw se;
+                if (ConnectType == CONNECT_TYPE.NEW_CONNECT)
+                {
+                    Logger.LogError("SocketException : {0}", se.ToString());
+                    throw se;
+                }
+                return false;
             }
             catch (Exception e)
             {
                 Logger.LogError("Unexpected exception : {0}", e.ToString());
                 throw e;
             }
+            return true;
         }
-
+        enum CONNECT_TYPE
+        {
+            NEW_CONNECT,
+            RE_CONNECT
+        }
         /// <summary>
         /// UDP HolePunchingでUDPを接続する
         /// </summary>
@@ -137,57 +172,6 @@ namespace Sockety.Client
             int port = MessagePackSerializer.Deserialize<int>(data);
 
             return port;
-        }
-        /// <summary>
-        /// 再接続処理
-        /// </summary>
-        /// <returns></returns>
-        public bool ReConnect()
-        {
-            if (ServerEndPoint == null)
-            {
-                //一度も接続していない
-                throw new Exception("Not Connect");
-            }
-
-            if (clientReceiver.Connected == false)
-            {
-                try
-                {
-                    serverSocket.Close();
-                    //TCP接続
-                    serverSocket = new Socket(ServerEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                    //接続処理
-                    serverSocket.Connect(ServerEndPoint);
-                    SendClientInfo(serverSocket, clientInfo);
-
-                    //Udp接続
-                    var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort());
-
-                    //受信スレッド作成
-                    clientReceiver.Run(handler: serverSocket,
-                        UdpSocket: UdpInfo.socket,
-                        UdpEndPort: UdpInfo.point,
-                        clientInfo: clientInfo,
-                        Parent);
-                    Logger.LogInformation("ReConnect");
-                }
-                catch (SocketException ex)
-                {
-                    //if (ex.SocketErrorCode == SocketError.ConnectionRefused)
-                    //{
-                    //    //いまだ接続できず
-                    //    return false;
-                    //}
-                    //throw ex;
-                    return false;
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-            }
-            return true;
         }
 
         #region IDisposable

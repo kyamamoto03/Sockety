@@ -208,26 +208,38 @@ namespace Sockety.Client
 
                     if (bytesRec > 0)
                     {
-                        var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
-                        lock (RecieveSyncEvent)
+                        SocketyPacket packet = null;
+                        try
                         {
-                            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
-                            {
-                                ReceiveHeartBeat();
-                            }
-                            else
-                            {
+                            packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
+                        }
+                        catch
+                        {
+                            Console.WriteLine("MessagePack Fail");
+                        }
 
-                                if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                        if (packet != null)
+                        {
+                            lock (RecieveSyncEvent)
+                            {
+                                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
                                 {
-                                    ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
-                                    ServerResponse = packet.PackData;
-                                    RecieveSyncEvent.Set();
+                                    ReceiveHeartBeat();
                                 }
                                 else
                                 {
-                                    ///非同期なので、クライアントメソッドを呼ぶ
-                                    InvokeMethod(packet);
+
+                                    if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                                    {
+                                        ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
+                                        ServerResponse = packet.PackData;
+                                        RecieveSyncEvent.Set();
+                                    }
+                                    else
+                                    {
+                                        ///非同期なので、クライアントメソッドを呼ぶ
+                                        InvokeMethod(packet);
+                                    }
                                 }
                             }
                         }

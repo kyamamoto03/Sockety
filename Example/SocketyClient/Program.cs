@@ -3,8 +3,9 @@ using Sockety.Client;
 using Sockety.Model;
 using System;
 using System.Text;
+using System.Threading;
 
-namespace iSocketClient
+namespace SocketyClient
 {
     class Program
     {
@@ -49,12 +50,13 @@ namespace iSocketClient
                     {
                         return;
                     }
+                    Thread.Sleep(1000);
                 }
             };
 
             try
             {
-                client.Connect("localhost", 11000, "ConsoleApp", this);
+                client.Connect("192.168.2.12", 11000, "ConsoleApp", this);
             }catch(Exception e)
             {
                 Console.WriteLine(e.ToString());
