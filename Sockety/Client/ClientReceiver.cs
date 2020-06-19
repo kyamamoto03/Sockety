@@ -107,6 +107,7 @@ namespace Sockety.Client
             serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
         }
 
+        private object SendLock = new object();
         /// <summary>
         /// サーバメソッド呼び出し（サーバのレスポンスを待つ）
         /// </summary>
@@ -115,25 +116,28 @@ namespace Sockety.Client
         /// <returns></returns>
         internal byte[] Send(string serverMethodName, byte[] data)
         {
-            if (serverSocket == null || serverSocket.Connected == false)
+            lock (SendLock)
             {
-                return null;
+                if (serverSocket == null || serverSocket.Connected == false)
+                {
+                    return null;
+                }
+
+                lock (ServerCallMethodName)
+                {
+                    ServerCallMethodName = serverMethodName;
+                }
+                SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data };
+                RecieveSyncEvent.Reset();
+
+                var d = MessagePackSerializer.Serialize(packet);
+                var sizeb = BitConverter.GetBytes(d.Length);
+                serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+
+                serverSocket.Send(d, d.Length, SocketFlags.None);
+                RecieveSyncEvent.WaitOne();
+
             }
-
-            lock (ServerCallMethodName)
-            {
-                ServerCallMethodName = serverMethodName;
-            }
-            SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data };
-            RecieveSyncEvent.Reset();
-
-            var d = MessagePackSerializer.Serialize(packet);
-            var sizeb = BitConverter.GetBytes(d.Length);
-            serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-
-            serverSocket.Send(d,d.Length,SocketFlags.None);
-            RecieveSyncEvent.WaitOne();
-
             return ServerResponse;
         }
 
