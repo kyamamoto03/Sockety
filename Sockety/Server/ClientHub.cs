@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Sockety.Base;
 using Sockety.Model;
 using Sockety.Service;
 using System;
@@ -72,7 +73,7 @@ namespace Sockety.Server
         {
             try
             {
-                lock (serverSocket)
+                using (await TCPReceiveLock.LockAsync())
                 {
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
@@ -94,11 +95,11 @@ namespace Sockety.Server
 
         #endregion
 
-        internal void SendNonReturn(string ClientMethodName, byte[] data)
+        internal async Task SendNonReturn(string ClientMethodName, byte[] data)
         {
             try
             {
-                lock (serverSocket)
+                using (await TCPReceiveLock.LockAsync())
                 {
                     var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                     var d = MessagePackSerializer.Serialize(packet);
@@ -186,6 +187,7 @@ namespace Sockety.Server
             }
         }
 
+        private AsyncLock TCPReceiveLock = new AsyncLock();
         /// <summary>
         /// 受信を一括して行う
         /// </summary>
@@ -203,37 +205,40 @@ namespace Sockety.Server
                     }
 
                     int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
-                    if (bytesRec == 0)
+                    using (await TCPReceiveLock.LockAsync())
                     {
-                        await DisConnect();
-                        //受信スレッド終了
-                        return;
+                        if (bytesRec == 0)
+                        {
+                            await DisConnect();
+                            //受信スレッド終了
+                            return;
+                        }
+                        int size = BitConverter.ToInt32(sizeb, 0);
+
+                        byte[] buffer = new byte[size];
+                        int DataSize = 0;
+                        do
+                        {
+
+                            bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
+
+                            DataSize += bytesRec;
+
+                        } while (size > DataSize);
+
+                        var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
+
+                        //メソッドの戻り値を詰め替える
+                        packet.PackData = await InvokeMethodAsync(packet);
+
+
+                        //InvokeMethodAsyncの戻り値を送り返す
+                        var d = MessagePackSerializer.Serialize(packet);
+                        sizeb = BitConverter.GetBytes(d.Length);
+                        serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+
+                        serverSocket.Send(d, d.Length, SocketFlags.None);
                     }
-                    int size = BitConverter.ToInt32(sizeb, 0);
-
-                    byte[] buffer = new byte[size];
-                    int DataSize = 0;
-                    do
-                    {
-
-                        bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
-
-                        DataSize += bytesRec;
-
-                    } while (size > DataSize);
-
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
-
-                    //メソッドの戻り値を詰め替える
-                    packet.PackData = await InvokeMethodAsync(packet);
-
-
-                    //InvokeMethodAsyncの戻り値を送り返す
-                    var d = MessagePackSerializer.Serialize(packet);
-                    sizeb = BitConverter.GetBytes(d.Length);
-                    serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-
-                    serverSocket.Send(d, d.Length, SocketFlags.None);
                 }
                 catch (SocketException ex)
                 {

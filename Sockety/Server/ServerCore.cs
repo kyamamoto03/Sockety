@@ -271,11 +271,11 @@ namespace Sockety.Server
 
             }
 
-            SendLists.ForEach(x =>
+            SendLists.ForEach(async (x) =>
             {
                 try
                 {
-                    x.SendNonReturn(ClientMethodName, data);
+                    await x.SendNonReturn(ClientMethodName, data);
                 }
                 catch (SocketException)
                 {

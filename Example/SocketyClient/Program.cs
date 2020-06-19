@@ -56,7 +56,7 @@ namespace SocketyClient
 
             try
             {
-                client.Connect("192.168.2.12", 11000, "ConsoleApp", this);
+                client.Connect("localhost", 11000, "ConsoleApp", this);
             }catch(Exception e)
             {
                 Console.WriteLine(e.ToString());
@@ -69,11 +69,11 @@ namespace SocketyClient
 
             while (true)
             {
-                //var ret = (string)client.Send("Echo", DateTime.Now.ToString());
-                //Console.WriteLine(ret);
+                echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+                Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
                 //var t = Encoding.ASCII.GetBytes("UDP Test");
                 //client.UdpSend(t);
-                System.Threading.Thread.Sleep(2000);
+                System.Threading.Thread.Sleep(200);
             }
         }
 
