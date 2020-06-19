@@ -104,8 +104,8 @@ namespace Sockety.Server
                     var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                     var d = MessagePackSerializer.Serialize(packet);
                     var sizeb = BitConverter.GetBytes(d.Length);
-                    serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-                    serverSocket.Send(d, d.Length, SocketFlags.None);
+                    serverSocket?.Send(sizeb, sizeof(int), SocketFlags.None);
+                    serverSocket?.Send(d, d.Length, SocketFlags.None);
                 }
             }
             catch (SocketException ex)
