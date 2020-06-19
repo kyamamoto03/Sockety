@@ -217,7 +217,6 @@ namespace Sockety.Server
                     {
 
                         bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
-                        //Logger.LogInformation($"ReceiveProcess: size={size},bytesRec={bytesRec}");
 
                         DataSize += bytesRec;
 
