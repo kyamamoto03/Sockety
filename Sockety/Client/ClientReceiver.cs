@@ -274,6 +274,7 @@ namespace Sockety.Client
         private void ConnectionLost()
         {
             Connected = false;
+            RecieveSyncEvent.Set();
             //再切断呼び出し
             Task.Run(() => ConnectionReset?.Invoke());
         }
