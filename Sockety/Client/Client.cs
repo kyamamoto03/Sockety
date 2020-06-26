@@ -114,7 +114,7 @@ namespace Sockety.Client
             {
                 if (ex.HResult == -2146232800)
                 {
-                    Logger.LogError("SocketException : {0}", ex.ToString());
+                    Logger.LogError("IOException : {0}", ex.ToString());
                     throw ex;
                 }
                 return false;

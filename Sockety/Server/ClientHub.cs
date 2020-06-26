@@ -86,7 +86,7 @@ namespace Sockety.Server
                     networkStream.Write(d, 0, d.Length);
                 }
             }
-            catch (SocketException ex)
+            catch (IOException ex)
             {
                 Console.WriteLine("SendHeartBeat:DisConnect");
                 await DisConnect();

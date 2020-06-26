@@ -4,6 +4,7 @@ using Sockety.Model;
 using Sockety.Service;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -276,7 +277,7 @@ namespace Sockety.Server
                 {
                     await x.SendNonReturn(ClientMethodName, data);
                 }
-                catch (SocketException)
+                catch (IOException)
                 {
                     //切断が発覚したので、切断リストに追加
                     DisConnction.Add(x);
@@ -319,7 +320,7 @@ namespace Sockety.Server
                 {
                     SendClientHub.SendNonReturn(ClientMethodName, data);
                 }
-                catch (SocketException)
+                catch (IOException)
                 {
                     SocketClient<T>.GetInstance().RemoveClientHub(SendClientHub);
                     SendClientHub.KillSW = true;
