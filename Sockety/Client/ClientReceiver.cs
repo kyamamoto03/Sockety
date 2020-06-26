@@ -4,6 +4,7 @@ using Sockety.Model;
 using Sockety.Service;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -253,10 +254,10 @@ namespace Sockety.Client
                         Thread.Sleep(100);
                     }
                 }
-                catch (SocketException ex)
+                catch (IOException ex)
                 {
                     //通信切断処理
-                    if (ex.SocketErrorCode == SocketError.ConnectionReset)
+                    if (ex.HResult == -2146232800)
                     {
                         ConnectionLost();
 

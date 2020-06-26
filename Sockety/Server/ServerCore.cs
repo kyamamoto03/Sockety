@@ -19,16 +19,16 @@ namespace Sockety.Server
         public void Dispose()
         {
             SocketClient<T>.GetInstance().ClientHubs.ForEach(x => x.Dispose());
-            if (MainListener != null && MainListener.Connected == true)
+            if (MainListener != null )
             {
-                MainListener.Disconnect(false);
+                MainListener.Stop();
                 MainListener = null;
             }
         }
         #endregion
         private ILogger Logger;
 
-        private Socket MainListener;
+        private TcpListener MainListener;
         private T Parent;
         CancellationTokenSource stoppingCts;
         /// <summary>
@@ -47,11 +47,13 @@ namespace Sockety.Server
             stoppingCts = _stoppingCts;
 
             // メイン接続のTCP/IPを作成
-            MainListener = new Socket(localEndPoint.AddressFamily,
-                SocketType.Stream, ProtocolType.Tcp);
+            MainListener = new TcpListener(localEndPoint.Address, localEndPoint.Port);
+            MainListener.Start();
+            //    localEndPoint.AddressFamily,
+            //    SocketType.Stream, ProtocolType.Tcp);
 
-            MainListener.Bind(localEndPoint);
-            MainListener.Listen(10);
+            //MainListener.Bind(localEndPoint);
+            //MainListener.Listen(10);
 
 
             Task.Run(async () =>
@@ -62,9 +64,9 @@ namespace Sockety.Server
                     try
                     {
                         Logger.LogInformation("Waiting for a connection...");
-                        Socket handler = await MainListener.AcceptAsync();
+                        TcpClient handler = await MainListener.AcceptTcpClientAsync();
                         //クライアント情報を受信
-                        var clientInfo = ClientInfoReceive(handler);
+                        var clientInfo = ClientInfoReceive(handler.GetStream());
                         if (ClientInfoManagement(clientInfo) == true)
                         {
                             Logger.LogInformation($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
@@ -78,7 +80,10 @@ namespace Sockety.Server
                         var CanUDPConnectPort = UserCommunicateService<T>.Get().Where(x => x.IsConnect == false).First();
 
                         //Udpポート番号を送信
-                        handler.Send(MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber));
+                        //handler.Send(MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber));
+                        var portData = MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber);
+                        var ns = handler.GetStream();
+                        ns.Write(portData, 0, portData.Length);
 
                         //Udp HolePunching
                         var ret = UdpConnect(CanUDPConnectPort.UdpPortNumber);
@@ -337,10 +342,11 @@ namespace Sockety.Server
             }
         }
 
-        private ClientInfo ClientInfoReceive(Socket handler)
+        private ClientInfo ClientInfoReceive(NetworkStream ns)
         {
             byte[] bytes = new Byte[SocketySetting.MAX_BUFFER];
-            handler.Receive(bytes);
+            //handler.Receive(bytes);
+            ns.Read(bytes, 0, bytes.Length);
             ClientInfo clientInfo = MessagePackSerializer.Deserialize<ClientInfo>(bytes);
 
             return clientInfo;

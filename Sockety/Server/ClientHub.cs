@@ -4,6 +4,7 @@ using Sockety.Base;
 using Sockety.Model;
 using Sockety.Service;
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,9 @@ namespace Sockety.Server
 {
     public class ClientHub<T> : IDisposable where T : IService
     {
-        private Socket serverSocket = null;
+        private TcpClient serverSocket = null;
+        private NetworkStream networkStream;
+
         private Thread TcpThread;
         public ClientInfo ClientInfo { get; private set; }
         private T UserClass;
@@ -27,7 +30,7 @@ namespace Sockety.Server
 
         PacketSerivce<T> PacketSerivce;
 
-        public ClientHub(Socket _handler,
+        public ClientHub(TcpClient _handler,
             ClientInfo _clientInfo,
             UdpPort<T> udpPort,
             T userClass,
@@ -40,6 +43,7 @@ namespace Sockety.Server
             this.UdpPort = udpPort;
             this.Parent = parent;
             this.Logger = logger;
+            networkStream = this.serverSocket.GetStream();
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(userClass);
@@ -51,7 +55,7 @@ namespace Sockety.Server
         {
             if (serverSocket != null)
             {
-                serverSocket.Shutdown(SocketShutdown.Both);
+                networkStream.Close();
                 serverSocket.Close();
                 serverSocket = null;
             }
@@ -78,8 +82,10 @@ namespace Sockety.Server
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
                     var sizeb = BitConverter.GetBytes(d.Length);
-                    serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-                    serverSocket.Send(d, d.Length, SocketFlags.None);
+                    //serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+                    //serverSocket.Send(d, d.Length, SocketFlags.None);
+                    networkStream.Write(sizeb, 0, sizeof(int));
+                    networkStream.Write(d, 0, d.Length);
                 }
             }
             catch (SocketException ex)
@@ -104,13 +110,17 @@ namespace Sockety.Server
                     var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                     var d = MessagePackSerializer.Serialize(packet);
                     var sizeb = BitConverter.GetBytes(d.Length);
-                    serverSocket?.Send(sizeb, sizeof(int), SocketFlags.None);
-                    serverSocket?.Send(d, d.Length, SocketFlags.None);
+                    if (serverSocket != null)
+                    {
+                        networkStream.Write(sizeb, 0, sizeof(int));
+                        networkStream.Write(d, 0, d.Length);
+                    }
                 }
             }
-            catch (SocketException ex)
+            catch (IOException ex)
             {
-                throw ex;
+                Logger.LogInformation(ex.ToString());
+                return;
             }
             catch (Exception ex)
             {
@@ -204,7 +214,7 @@ namespace Sockety.Server
                         return;
                     }
 
-                    int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
+                    int bytesRec = networkStream.Read(sizeb, 0, sizeof(int));
                     using (await TCPReceiveLock.LockAsync())
                     {
                         if (bytesRec == 0)
@@ -220,7 +230,7 @@ namespace Sockety.Server
                         do
                         {
 
-                            bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
+                            bytesRec = networkStream.Read(buffer, DataSize, size - DataSize);
 
                             DataSize += bytesRec;
 
@@ -235,20 +245,20 @@ namespace Sockety.Server
                         //InvokeMethodAsyncの戻り値を送り返す
                         var d = MessagePackSerializer.Serialize(packet);
                         sizeb = BitConverter.GetBytes(d.Length);
-                        serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-
-                        serverSocket.Send(d, d.Length, SocketFlags.None);
+                        networkStream.Write(sizeb, 0, sizeof(int));
+                        networkStream.Write(d, 0, d.Length);
                     }
                 }
-                catch (SocketException ex)
+                catch (IOException ex)
                 {
-                    if (ex.SocketErrorCode == SocketError.ConnectionReset)
+                    if (ex.HResult == -2146232800)
                     {
                         await DisConnect();
 
                         //受信スレッド終了
                         return;
                     }
+
                 }
                 catch (Exception ex)
                 {
