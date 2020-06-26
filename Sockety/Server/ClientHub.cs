@@ -82,8 +82,6 @@ namespace Sockety.Server
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
                     var sizeb = BitConverter.GetBytes(d.Length);
-                    //serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
-                    //serverSocket.Send(d, d.Length, SocketFlags.None);
                     networkStream.Write(sizeb, 0, sizeof(int));
                     networkStream.Write(d, 0, d.Length);
                 }
