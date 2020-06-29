@@ -154,9 +154,7 @@ namespace Sockety.Server
 
         public void Run()
         {
-            TcpThread = new Thread(new ThreadStart(ReceiveProcess));
-            TcpThread.Start();
-
+            Task.Run( ReceiveProcess);
             //UDPの受信を開始
             var UdpStateObject = new StateObject() { 
                 Buffer = new byte[SocketySetting.MAX_BUFFER], 
