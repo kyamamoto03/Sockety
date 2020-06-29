@@ -71,6 +71,7 @@ namespace Sockety.Server
 
                         Stream CommunicateStream;
                         if (serverSetting.UseSSL == true){
+                            Logger.LogInformation("UseSSL");
                             //SSL設定
                             SslStream sslStream = new SslStream(handler.GetStream());
                             sslStream.AuthenticateAsServer(serverSetting.Certificate, false, System.Security.Authentication.SslProtocols.Tls12, true);
@@ -78,6 +79,7 @@ namespace Sockety.Server
                         }
                         else
                         {
+                            Logger.LogInformation("NonSSL");
                             //平文
                             CommunicateStream = handler.GetStream();
                         }

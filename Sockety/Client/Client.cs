@@ -47,6 +47,9 @@ namespace Sockety.Client
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = parent;
 
+            //新規の接続なのでClientInfoを作成
+            clientInfo = CreateNewClientInfo(UserName);
+
             return ConnectProcess(CONNECT_TYPE.NEW_CONNECT);
         }
 
@@ -105,8 +108,6 @@ namespace Sockety.Client
                 Logger.LogInformation("Socket connected to {0}",
                 serverSocket.ToString());
 
-                //新規の接続なのでClientInfoを作成
-                clientInfo = CreateNewClientInfo(UserName);
                 //接続出来たらクライアント情報を送る
                 SendClientInfo(CommunicateStream, clientInfo);
 
