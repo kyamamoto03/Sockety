@@ -3,6 +3,9 @@ using System;
 
 namespace Sockety.Model
 {
+    /// <summary>
+    /// UDPパケット
+    /// </summary>
     [MessagePackObject]
     public class SocketyPacketUDP
     {

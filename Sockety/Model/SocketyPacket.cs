@@ -2,6 +2,9 @@
 
 namespace Sockety.Model
 {
+    /// <summary>
+    /// TCPで送るパケット
+    /// </summary>
     [MessagePackObject]
     public class SocketyPacket
     {

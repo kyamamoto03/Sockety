@@ -6,7 +6,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Xml.Schema;
@@ -44,6 +46,9 @@ namespace Sockety.Client
             this.UserName = userName;
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = parent;
+
+            //新規の接続なのでClientInfoを作成
+            clientInfo = CreateNewClientInfo(UserName);
 
             return ConnectProcess(CONNECT_TYPE.NEW_CONNECT);
         }
@@ -85,20 +90,33 @@ namespace Sockety.Client
             {
                 //TCP接続
                 serverSocket = new TcpClient(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
+                var serverSetting = ReceiveServerSetting(serverSocket.GetStream());
+
+
+                Stream CommunicateStream;
+                if (serverSetting.UseSSL == true)
+                {
+                    SslStream sslStream = new SslStream(serverSocket.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+                    sslStream.AuthenticateAsClient(ServerHost);
+                    CommunicateStream = sslStream as Stream;
+                }
+                else
+                {
+                    CommunicateStream = serverSocket.GetStream();
+                }
 
                 Logger.LogInformation("Socket connected to {0}",
-                    serverSocket.ToString());
+                serverSocket.ToString());
 
-                //新規の接続なのでClientInfoを作成
-                clientInfo = CreateNewClientInfo(UserName);
                 //接続出来たらクライアント情報を送る
-                SendClientInfo(serverSocket, clientInfo);
+                SendClientInfo(CommunicateStream, clientInfo);
 
                 //Udp接続
-                var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort());
+                var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort(CommunicateStream));
 
                 //受信スレッド作成
                 clientReceiver.Run(handler: serverSocket,
+                    _stream: CommunicateStream,
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
                     clientInfo: clientInfo,
@@ -126,11 +144,35 @@ namespace Sockety.Client
             }
             return true;
         }
+
+        /// <summary>
+        /// 接続情報を受信(平文)
+        /// </summary>
+        /// <param name="networkStream"></param>
+        /// <returns></returns>
+        private ConnectionSetting ReceiveServerSetting(NetworkStream networkStream)
+        {
+            byte[] sizeb = new byte[sizeof(int)];
+            networkStream.Read(sizeb, 0, sizeof(int));
+
+            byte[] data = new byte[BitConverter.ToInt32(sizeb,0)];
+            networkStream.Read(data, 0, data.Length);
+            return MessagePackSerializer.Deserialize<ConnectionSetting>(data);
+        }
+
         enum CONNECT_TYPE
         {
             NEW_CONNECT,
             RE_CONNECT
         }
+
+
+        public static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            // 証明書受け入れ
+            return true;
+        }
+
         /// <summary>
         /// UDP HolePunchingでUDPを接続する
         /// </summary>
@@ -164,11 +206,10 @@ namespace Sockety.Client
         /// UDPの接続ポート番号を受信
         /// </summary>
         /// <returns></returns>
-        private int ReceiveUdpPort()
+        private int ReceiveUdpPort(Stream stream)
         {
             byte[] data = new byte[SocketySetting.MAX_BUFFER];
-            var ns = serverSocket.GetStream();
-            ns.Read(data, 0, sizeof(int));
+            stream.Read(data, 0, sizeof(int));
             int port = MessagePackSerializer.Deserialize<int>(data);
 
             return port;
@@ -200,11 +241,10 @@ namespace Sockety.Client
             return clientInfo;
         }
 
-        private void SendClientInfo(TcpClient socket, ClientInfo clientInfo)
+        private void SendClientInfo(Stream stream, ClientInfo clientInfo)
         {
             byte[] bytes = MessagePackSerializer.Serialize(clientInfo);
-            var ns = socket.GetStream();
-            ns.Write(bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
         }
 
         /// <summary>
