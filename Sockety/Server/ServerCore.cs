@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,10 +44,13 @@ namespace Sockety.Server
             Logger = logger;
         }
 
+        private X509Certificate Certificate;
         public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent)
         {
             Parent = parent;
             stoppingCts = _stoppingCts;
+
+            Certificate = new X509Certificate("test-cert.pfx","testcert");
 
             // メイン接続のTCP/IPを作成
             MainListener = new TcpListener(localEndPoint.Address, localEndPoint.Port);
@@ -61,8 +66,14 @@ namespace Sockety.Server
                     {
                         Logger.LogInformation("Waiting for a connection...");
                         TcpClient handler = await MainListener.AcceptTcpClientAsync();
+                        Stream CommunicateStream;
+                        {
+                            SslStream sslStream = new SslStream(handler.GetStream());
+                            sslStream.AuthenticateAsServer(Certificate, false, System.Security.Authentication.SslProtocols.Tls12, true);
+                            CommunicateStream = sslStream as Stream;
+                        }
                         //クライアント情報を受信
-                        var clientInfo = ClientInfoReceive(handler.GetStream());
+                        var clientInfo = ClientInfoReceive(CommunicateStream);
                         if (ClientInfoManagement(clientInfo) == true)
                         {
                             Logger.LogInformation($"ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
@@ -77,8 +88,7 @@ namespace Sockety.Server
 
                         //Udpポート番号を送信
                         var portData = MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber);
-                        var ns = handler.GetStream();
-                        ns.Write(portData, 0, portData.Length);
+                        CommunicateStream.Write(portData, 0, portData.Length);
 
                         //Udp HolePunching
                         var ret = UdpConnect(CanUDPConnectPort.UdpPortNumber);
@@ -88,6 +98,7 @@ namespace Sockety.Server
 
                         // クライアントが接続したので、受付スレッドを開始する
                         var clientHub = new ClientHub<T>(_handler: handler,
+                            _stream: CommunicateStream,
                             _clientInfo: clientInfo,
                             udpPort: CanUDPConnectPort,
                             userClass: Parent,
@@ -337,7 +348,7 @@ namespace Sockety.Server
             }
         }
 
-        private ClientInfo ClientInfoReceive(NetworkStream ns)
+        private ClientInfo ClientInfoReceive(Stream ns)
         {
             byte[] bytes = new Byte[SocketySetting.MAX_BUFFER];
             ns.Read(bytes, 0, bytes.Length);

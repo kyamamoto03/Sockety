@@ -14,7 +14,7 @@ namespace Sockety.Server
     public class ClientHub<T> : IDisposable where T : IService
     {
         private TcpClient serverSocket = null;
-        private NetworkStream networkStream;
+        private Stream commnicateStream;
 
         private Thread TcpThread;
         public ClientInfo ClientInfo { get; private set; }
@@ -31,6 +31,7 @@ namespace Sockety.Server
         PacketSerivce<T> PacketSerivce;
 
         public ClientHub(TcpClient _handler,
+            Stream _stream,
             ClientInfo _clientInfo,
             UdpPort<T> udpPort,
             T userClass,
@@ -43,7 +44,7 @@ namespace Sockety.Server
             this.UdpPort = udpPort;
             this.Parent = parent;
             this.Logger = logger;
-            networkStream = this.serverSocket.GetStream();
+            this.commnicateStream = _stream;
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(userClass);
@@ -55,7 +56,7 @@ namespace Sockety.Server
         {
             if (serverSocket != null)
             {
-                networkStream.Close();
+                commnicateStream.Close();
                 serverSocket.Close();
                 serverSocket = null;
             }
@@ -82,8 +83,8 @@ namespace Sockety.Server
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
                     var sizeb = BitConverter.GetBytes(d.Length);
-                    networkStream.Write(sizeb, 0, sizeof(int));
-                    networkStream.Write(d, 0, d.Length);
+                    commnicateStream.Write(sizeb, 0, sizeof(int));
+                    commnicateStream.Write(d, 0, d.Length);
                 }
             }
             catch (IOException ex)
@@ -110,8 +111,8 @@ namespace Sockety.Server
                     var sizeb = BitConverter.GetBytes(d.Length);
                     if (serverSocket != null)
                     {
-                        networkStream.Write(sizeb, 0, sizeof(int));
-                        networkStream.Write(d, 0, d.Length);
+                        commnicateStream.Write(sizeb, 0, sizeof(int));
+                        commnicateStream.Write(d, 0, d.Length);
                     }
                 }
             }
@@ -212,7 +213,7 @@ namespace Sockety.Server
                         return;
                     }
 
-                    int bytesRec = networkStream.Read(sizeb, 0, sizeof(int));
+                    int bytesRec = commnicateStream.Read(sizeb, 0, sizeof(int));
                     using (await TCPReceiveLock.LockAsync())
                     {
                         if (bytesRec == 0)
@@ -228,7 +229,7 @@ namespace Sockety.Server
                         do
                         {
 
-                            bytesRec = networkStream.Read(buffer, DataSize, size - DataSize);
+                            bytesRec = commnicateStream.Read(buffer, DataSize, size - DataSize);
 
                             DataSize += bytesRec;
 
@@ -243,8 +244,8 @@ namespace Sockety.Server
                         //InvokeMethodAsyncの戻り値を送り返す
                         var d = MessagePackSerializer.Serialize(packet);
                         sizeb = BitConverter.GetBytes(d.Length);
-                        networkStream.Write(sizeb, 0, sizeof(int));
-                        networkStream.Write(d, 0, d.Length);
+                        commnicateStream.Write(sizeb, 0, sizeof(int));
+                        commnicateStream.Write(d, 0, d.Length);
                     }
                 }
                 catch (IOException ex)

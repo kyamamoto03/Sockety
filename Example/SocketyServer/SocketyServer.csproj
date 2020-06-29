@@ -14,4 +14,10 @@
     <ProjectReference Include="..\..\Sockety\Sockety.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="test-cert.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

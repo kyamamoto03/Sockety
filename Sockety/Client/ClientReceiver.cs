@@ -16,7 +16,7 @@ namespace Sockety.Client
     internal class ClientReceiver<T> : IDisposable where T : IService
     {
         private TcpClient serverSocket = null;
-        private NetworkStream networkStream;
+        private Stream stream;
         private Socket serverUdpSocket;
         private IPEndPoint serverUdpPort;
 
@@ -72,7 +72,13 @@ namespace Sockety.Client
         }
 
 
-        internal void Run(TcpClient handler, Socket UdpSocket, IPEndPoint UdpEndPort, ClientInfo clientInfo, T parent)
+        internal void Run(
+            TcpClient handler, 
+            Stream _stream,
+            Socket UdpSocket,
+            IPEndPoint UdpEndPort,
+            ClientInfo clientInfo, 
+            T parent)
         {
             Parent = parent;
             serverSocket = handler;
@@ -80,7 +86,7 @@ namespace Sockety.Client
             serverUdpPort = UdpEndPort;
             ClientInfo = clientInfo;
             Connected = true;
-            networkStream = serverSocket.GetStream();
+            stream = _stream;
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(parent);
@@ -135,9 +141,9 @@ namespace Sockety.Client
 
                 var d = MessagePackSerializer.Serialize(packet);
                 var sizeb = BitConverter.GetBytes(d.Length);
-                networkStream.Write(sizeb, 0, sizeof(int));
+                stream.Write(sizeb, 0, sizeof(int));
 
-                networkStream.Write(d, 0, d.Length);
+                stream.Write(d, 0, d.Length);
                 RecieveSyncEvent.WaitOne();
 
             }
@@ -188,7 +194,7 @@ namespace Sockety.Client
 
                     }
                     //データサイズ受信
-                    int bytesRec = networkStream.Read(sizeb, 0, sizeof(int));
+                    int bytesRec = stream.Read(sizeb, 0, sizeof(int));
                     int size = BitConverter.ToInt32(sizeb, 0);
 
                     //データ領域確保
@@ -205,7 +211,7 @@ namespace Sockety.Client
                         else
                         {
                             //データ受信
-                            bytesRec = networkStream.Read(buffer, DataSize, size - DataSize);
+                            bytesRec = stream.Read(buffer, DataSize, size - DataSize);
 
                             DataSize += bytesRec;
                         }
