@@ -45,12 +45,16 @@ namespace Sockety.Server
         }
 
         private ServerSetting serverSetting;
-        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent, ServerSetting _serverSetting)
+        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent, ServerSetting _serverSetting = null)
         {
             Parent = parent;
             stoppingCts = _stoppingCts;
             serverSetting = _serverSetting;
 
+            if (serverSetting == null)
+            {
+                serverSetting = new ServerSetting { UseSSL = false };
+            }
             // メイン接続のTCP/IPを作成
             MainListener = new TcpListener(localEndPoint.Address, localEndPoint.Port);
             MainListener.Start();
