@@ -87,15 +87,20 @@ namespace Sockety.Client
             {
                 //TCP接続
                 serverSocket = new TcpClient(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
+                var serverSetting = ReceiveServerSetting(serverSocket.GetStream());
+
 
                 Stream CommunicateStream;
+                if (serverSetting.UseSSL == true)
                 {
                     SslStream sslStream = new SslStream(serverSocket.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
                     sslStream.AuthenticateAsClient(ServerHost);
                     CommunicateStream = sslStream as Stream;
                 }
-
-
+                else
+                {
+                    CommunicateStream = serverSocket.GetStream();
+                }
 
                 Logger.LogInformation("Socket connected to {0}",
                 serverSocket.ToString());
@@ -138,6 +143,22 @@ namespace Sockety.Client
             }
             return true;
         }
+
+        /// <summary>
+        /// 接続情報を受信(平文)
+        /// </summary>
+        /// <param name="networkStream"></param>
+        /// <returns></returns>
+        private ConnectionSetting ReceiveServerSetting(NetworkStream networkStream)
+        {
+            byte[] sizeb = new byte[sizeof(int)];
+            networkStream.Read(sizeb, 0, sizeof(int));
+
+            byte[] data = new byte[BitConverter.ToInt32(sizeb,0)];
+            networkStream.Read(data, 0, data.Length);
+            return MessagePackSerializer.Deserialize<ConnectionSetting>(data);
+        }
+
         enum CONNECT_TYPE
         {
             NEW_CONNECT,

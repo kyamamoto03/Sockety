@@ -74,8 +74,10 @@ namespace SocketyServer
             //すべてのIPで接続を受け付ける
             IPAddress ipAddress = IPAddress.Any;
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PortNumber);
+            var serverSetting = new ServerSetting { UseSSL = false };
+            serverSetting.LoadCertificateFile("test-cert.pfx", "testcert");
 
-            serverCore.Start(localEndPoint, _stoppingCts, this);
+            serverCore.Start(localEndPoint:localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
 
             int cnt = 0;
             while (!_stoppingCts.IsCancellationRequested)

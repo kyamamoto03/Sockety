@@ -44,13 +44,12 @@ namespace Sockety.Server
             Logger = logger;
         }
 
-        private X509Certificate Certificate;
-        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent)
+        private ServerSetting serverSetting;
+        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent, ServerSetting _serverSetting)
         {
             Parent = parent;
             stoppingCts = _stoppingCts;
-
-            Certificate = new X509Certificate("test-cert.pfx","testcert");
+            serverSetting = _serverSetting;
 
             // メイン接続のTCP/IPを作成
             MainListener = new TcpListener(localEndPoint.Address, localEndPoint.Port);
@@ -66,12 +65,23 @@ namespace Sockety.Server
                     {
                         Logger.LogInformation("Waiting for a connection...");
                         TcpClient handler = await MainListener.AcceptTcpClientAsync();
+
+                        //接続方法をクライアントに伝える
+                        SendConnectSetting(handler.GetStream(), serverSetting);
+
                         Stream CommunicateStream;
-                        {
+                        if (serverSetting.UseSSL == true){
+                            //SSL設定
                             SslStream sslStream = new SslStream(handler.GetStream());
-                            sslStream.AuthenticateAsServer(Certificate, false, System.Security.Authentication.SslProtocols.Tls12, true);
+                            sslStream.AuthenticateAsServer(serverSetting.Certificate, false, System.Security.Authentication.SslProtocols.Tls12, true);
                             CommunicateStream = sslStream as Stream;
                         }
+                        else
+                        {
+                            //平文
+                            CommunicateStream = handler.GetStream();
+                        }
+
                         //クライアント情報を受信
                         var clientInfo = ClientInfoReceive(CommunicateStream);
                         if (ClientInfoManagement(clientInfo) == true)
@@ -117,6 +127,29 @@ namespace Sockety.Server
                     }
                 }
             });
+        }
+
+        /// <summary>
+        /// ServerSettingを平文で送信
+        /// </summary>
+        /// <param name="networkStream"></param>
+        /// <param name="serverSetting"></param>
+        private void SendConnectSetting(NetworkStream networkStream, ServerSetting serverSetting)
+        {
+            var setting = new ConnectionSetting();
+            if (serverSetting.UseSSL == true)
+            {
+                setting.UseSSL = true;
+            }
+            else
+            {
+                setting.UseSSL = false;
+            }
+            var data = MessagePackSerializer.Serialize(setting);
+            var sizeb = BitConverter.GetBytes(data.Length);
+            networkStream.Write(sizeb, 0, sizeof(int));
+            networkStream.Write(data, 0, data.Length);
+
         }
 
         /// <summary>
