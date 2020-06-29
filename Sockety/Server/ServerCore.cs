@@ -114,7 +114,6 @@ namespace Sockety.Server
                             _clientInfo: clientInfo,
                             udpPort: CanUDPConnectPort,
                             userClass: Parent,
-                            parent: this,
                             logger: Logger);
 
 

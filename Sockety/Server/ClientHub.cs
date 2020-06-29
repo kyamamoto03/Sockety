@@ -20,7 +20,6 @@ namespace Sockety.Server
         public ClientInfo ClientInfo { get; private set; }
         private T UserClass;
         private UdpPort<T> UdpPort;
-        private ServerCore<T> Parent;
         /// <summary>
         /// クライアントが切断時に発火
         /// </summary>
@@ -39,14 +38,12 @@ namespace Sockety.Server
             ClientInfo _clientInfo,
             UdpPort<T> udpPort,
             T userClass,
-            ServerCore<T> parent,
             ILogger logger)
         {
             this.UserClass = userClass;
             this.serverSocket = _handler;
             this.ClientInfo = _clientInfo;
             this.UdpPort = udpPort;
-            this.Parent = parent;
             this.Logger = logger;
             this.commnicateStream = _stream;
 
