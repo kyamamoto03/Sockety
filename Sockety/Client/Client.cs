@@ -3,17 +3,19 @@ using Microsoft.Extensions.Logging;
 using Sockety.Model;
 using Sockety.Service;
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Xml.Schema;
 
 namespace Sockety.Client
 {
     public class Client<T> : IDisposable where T : IService
     {
-        private Socket serverSocket;
+        private TcpClient serverSocket;
         private ClientReceiver<T> clientReceiver { get; } = new ClientReceiver<T>();
         private T Parent;
         private IPEndPoint ServerEndPoint;
@@ -79,16 +81,13 @@ namespace Sockety.Client
             }
             ServerEndPoint = new IPEndPoint(host, PortNumber);
 
-            // Create a TCP/IP  socket.  
-            serverSocket = new Socket(ServerEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
             try
             {
                 //TCP接続
-                serverSocket.Connect(ServerEndPoint);
+                serverSocket = new TcpClient(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
 
                 Logger.LogInformation("Socket connected to {0}",
-                    serverSocket.RemoteEndPoint.ToString());
+                    serverSocket.ToString());
 
                 //新規の接続なのでClientInfoを作成
                 clientInfo = CreateNewClientInfo(UserName);
@@ -111,12 +110,12 @@ namespace Sockety.Client
                 Logger.LogError("ArgumentNullException : {0}", ane.ToString());
                 throw ane;
             }
-            catch (SocketException se)
+            catch (IOException ex)
             {
-                if (ConnectType == CONNECT_TYPE.NEW_CONNECT)
+                if (ex.HResult == -2146232800)
                 {
-                    Logger.LogError("SocketException : {0}", se.ToString());
-                    throw se;
+                    Logger.LogError("IOException : {0}", ex.ToString());
+                    throw ex;
                 }
                 return false;
             }
@@ -155,7 +154,7 @@ namespace Sockety.Client
 
             var sending_end_point = new IPEndPoint(host, PortNumber);
 
-            System.Threading.Thread.Sleep(1000);
+            Thread.Sleep(1000);
             sending_socket.SendTo(Encoding.UTF8.GetBytes(host.ToString()), sending_end_point);
 
             return (sending_socket, sending_end_point);
@@ -168,7 +167,8 @@ namespace Sockety.Client
         private int ReceiveUdpPort()
         {
             byte[] data = new byte[SocketySetting.MAX_BUFFER];
-            serverSocket.Receive(data);
+            var ns = serverSocket.GetStream();
+            ns.Read(data, 0, sizeof(int));
             int port = MessagePackSerializer.Deserialize<int>(data);
 
             return port;
@@ -186,7 +186,6 @@ namespace Sockety.Client
             if (serverSocket != null)
             {
                 clientReceiver.AbortReceiveProcess();
-                serverSocket.Shutdown(SocketShutdown.Both);
                 serverSocket.Close();
                 serverSocket = null;
             }
@@ -201,10 +200,11 @@ namespace Sockety.Client
             return clientInfo;
         }
 
-        private void SendClientInfo(Socket socket, ClientInfo clientInfo)
+        private void SendClientInfo(TcpClient socket, ClientInfo clientInfo)
         {
             byte[] bytes = MessagePackSerializer.Serialize(clientInfo);
-            socket.Send(bytes);
+            var ns = socket.GetStream();
+            ns.Write(bytes, 0, bytes.Length);
         }
 
         /// <summary>
@@ -238,7 +238,6 @@ namespace Sockety.Client
             packets.ForEach(x =>
             {
                 clientReceiver.UdpSend(x);
-                //Thread.Sleep(5);
             });
         }
     }

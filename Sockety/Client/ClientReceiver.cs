@@ -4,6 +4,7 @@ using Sockety.Model;
 using Sockety.Service;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -14,7 +15,8 @@ namespace Sockety.Client
 {
     internal class ClientReceiver<T> : IDisposable where T : IService
     {
-        private Socket serverSocket = null;
+        private TcpClient serverSocket = null;
+        private NetworkStream networkStream;
         private Socket serverUdpSocket;
         private IPEndPoint serverUdpPort;
 
@@ -70,7 +72,7 @@ namespace Sockety.Client
         }
 
 
-        internal void Run(Socket handler, Socket UdpSocket, IPEndPoint UdpEndPort, ClientInfo clientInfo, T parent)
+        internal void Run(TcpClient handler, Socket UdpSocket, IPEndPoint UdpEndPort, ClientInfo clientInfo, T parent)
         {
             Parent = parent;
             serverSocket = handler;
@@ -78,6 +80,7 @@ namespace Sockety.Client
             serverUdpPort = UdpEndPort;
             ClientInfo = clientInfo;
             Connected = true;
+            networkStream = serverSocket.GetStream();
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(parent);
@@ -132,9 +135,9 @@ namespace Sockety.Client
 
                 var d = MessagePackSerializer.Serialize(packet);
                 var sizeb = BitConverter.GetBytes(d.Length);
-                serverSocket.Send(sizeb, sizeof(int), SocketFlags.None);
+                networkStream.Write(sizeb, 0, sizeof(int));
 
-                serverSocket.Send(d, d.Length, SocketFlags.None);
+                networkStream.Write(d, 0, d.Length);
                 RecieveSyncEvent.WaitOne();
 
             }
@@ -160,8 +163,6 @@ namespace Sockety.Client
                 catch (Exception ex)
                 {
                     ////通信切断
-                    //Connected = false;
-                    //Task.Run(() => ConnectionReset?.Invoke());
                     Connected = false;
                     return;
                 }
@@ -187,7 +188,7 @@ namespace Sockety.Client
 
                     }
                     //データサイズ受信
-                    int bytesRec = serverSocket.Receive(sizeb, sizeof(int), SocketFlags.None);
+                    int bytesRec = networkStream.Read(sizeb, 0, sizeof(int));
                     int size = BitConverter.ToInt32(sizeb, 0);
 
                     //データ領域確保
@@ -204,7 +205,7 @@ namespace Sockety.Client
                         else
                         {
                             //データ受信
-                            bytesRec = serverSocket.Receive(buffer, DataSize, size - DataSize, SocketFlags.None);
+                            bytesRec = networkStream.Read(buffer, DataSize, size - DataSize);
 
                             DataSize += bytesRec;
                         }
@@ -253,10 +254,10 @@ namespace Sockety.Client
                         Thread.Sleep(100);
                     }
                 }
-                catch (SocketException ex)
+                catch (IOException ex)
                 {
                     //通信切断処理
-                    if (ex.SocketErrorCode == SocketError.ConnectionReset)
+                    if (ex.HResult == -2146232800)
                     {
                         ConnectionLost();
 
