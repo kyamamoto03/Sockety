@@ -25,9 +25,13 @@ namespace Sockety.Server
         /// クライアントが切断時に発火
         /// </summary>
         public Action<ClientInfo> ConnectionReset;
-        public bool KillSW = false;
+        private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
         private readonly ILogger Logger;
 
+        public void ThreadCancel()
+        {
+            _stoppingCts.Cancel();
+        }
         PacketSerivce<T> PacketSerivce;
 
         public ClientHub(TcpClient _handler,
@@ -204,7 +208,7 @@ namespace Sockety.Server
         {
             byte[] sizeb = new byte[sizeof(int)];
 
-            while (!KillSW)
+            while (_stoppingCts.IsCancellationRequested == false)
             {
                 try
                 {

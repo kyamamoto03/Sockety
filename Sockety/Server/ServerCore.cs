@@ -336,7 +336,7 @@ namespace Sockety.Server
                 DisConnction.ForEach(x =>
                 {
                     SocketClient<T>.GetInstance().RemoveClientHub(x);
-                    x.KillSW = true;
+                    x.ThreadCancel();
                     Logger.LogInformation($"BroadCastNoReturn DisConnect:{x.ClientInfo.ClientID}");
 
                     //通信切断
@@ -369,7 +369,7 @@ namespace Sockety.Server
                 catch (IOException)
                 {
                     SocketClient<T>.GetInstance().RemoveClientHub(SendClientHub);
-                    SendClientHub.KillSW = true;
+                    SendClientHub.ThreadCancel();
                     Logger.LogInformation($"SendNoReturn DisConnect:{SendClientHub.ClientInfo.ClientID}");
 
                     //通信切断
