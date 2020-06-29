@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Sockety.Model
 {
+    /// <summary>
+    /// サーバの接続情報
+    /// </summary>
     public class ServerSetting
     {
         public bool UseSSL { get; set; }
