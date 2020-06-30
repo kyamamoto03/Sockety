@@ -57,6 +57,11 @@ namespace SocketyClient
             try
             {
                 client.Connect("localhost", 11000, "ConsoleApp", this);
+
+                var tokenb = client.Send("Authentification", null);
+
+                client.SetAuthenticationToken(Encoding.ASCII.GetString(tokenb));
+
             }catch(Exception e)
             {
                 Console.WriteLine(e.ToString());

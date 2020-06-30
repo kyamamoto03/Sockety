@@ -280,5 +280,10 @@ namespace Sockety.Client
                 clientReceiver.UdpSend(x);
             });
         }
+
+        public void SetAuthenticationToken(string token)
+        {
+            clientReceiver.SetAuthenticationToken(token);
+        }
     }
 }

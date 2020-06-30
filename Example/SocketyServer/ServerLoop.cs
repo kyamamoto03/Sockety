@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sockety.Attribute;
 using Sockety.Filter;
 using Sockety.Model;
 using Sockety.Server;
@@ -119,6 +120,12 @@ namespace SocketyServer
         {
             string data = Encoding.ASCII.GetString(obj);
             return Encoding.ASCII.GetBytes($"ServerEcho {data}");
+        }
+
+        [SocketyAuthentificationIgnore]
+        public byte[] Authentification(ClientInfo sendclientInfo, byte[] data)
+        {
+            return Encoding.ASCII.GetBytes($"{DateTime.Now.ToString()}");
         }
 
         public void Join(ClientInfo sendclientInfo, byte[] JoinDate)

@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Sockety.Attribute;
 using Sockety.Base;
 using Sockety.Filter;
 using Sockety.Model;
@@ -8,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -244,15 +246,29 @@ namespace Sockety.Server
                         //AuthentificationFilter
                         bool AuthentificationSuccess = true;
                         var authentificationFilter = SocketyFilters.Get<IAuthenticationFIlter>();
+                        var method = GetMethod(packet);
+
                         if (authentificationFilter != null)
                         {
-                            AuthentificationSuccess = authentificationFilter.Authentication(packet.Toekn);
+                            bool FindIgnore = false;
+
+                            if (method.GetCustomAttribute<SocketyAuthentificationIgnoreAttribute>() != null)
+                            {
+                                //SocketyAuthentificationIgnoreがあるメソッドは認証を行わない
+                                FindIgnore = true;
+                                AuthentificationSuccess = true;
+                            }
+
+                            if (FindIgnore == false)
+                            {
+                                AuthentificationSuccess = authentificationFilter.Authentication(packet.Toekn);
+                            }
                         }
 
                         if (AuthentificationSuccess == true)
                         {
                             //メソッドの戻り値を詰め替える
-                            packet.PackData = await InvokeMethodAsync(packet);
+                            packet.PackData = await InvokeMethodAsync(method,packet);
 
 
                             //InvokeMethodAsyncの戻り値を送り返す
@@ -263,6 +279,7 @@ namespace Sockety.Server
                         }
                         else
                         {
+                            Logger.LogInformation($"Client Authentificateion Fail \r\n{packet.clientInfo.ToString()}");
                             //認証失敗は接続を切断
                             await DisConnect();
                         }
@@ -281,7 +298,7 @@ namespace Sockety.Server
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.ToString());
+                    Logger.LogError(ex.ToString());
                 }
                 Thread.Sleep(10);
             }
@@ -302,7 +319,7 @@ namespace Sockety.Server
             await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
         }
 
-        private async Task<byte[]> InvokeMethodAsync(SocketyPacket packet)
+        private MethodInfo GetMethod(SocketyPacket packet)
         {
             Type t = UserClass.GetType();
             var method = t.GetMethod(packet.MethodName);
@@ -311,6 +328,12 @@ namespace Sockety.Server
             {
                 throw new Exception("not found Method");
             }
+
+            return method;
+        }
+
+        private async Task<byte[]> InvokeMethodAsync(MethodInfo method, SocketyPacket packet)
+        {
             byte[] ret = (byte[])await Task.Run(() => method.Invoke(UserClass, new object[] { ClientInfo, packet.PackData }));
 
             return ret;

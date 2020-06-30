@@ -25,5 +25,10 @@ namespace Sockety.Model
             }
             return false;
         }
+
+        public override string ToString()
+        {
+            return $"ClientID:{ClientID}\r\nName:{Name}\r\nConnectDate:{ConnectDate}";
+        }
     }
 }

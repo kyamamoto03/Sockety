@@ -53,6 +53,8 @@ namespace Sockety.Client
         private T Parent;
         PacketSerivce<T> PacketSerivce;
 
+        internal AuthenticationToken AuthenticationToken = new AuthenticationToken();
+
         #region IDisposable
         public void Dispose()
         {
@@ -136,7 +138,7 @@ namespace Sockety.Client
                 {
                     ServerCallMethodName = serverMethodName;
                 }
-                SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data };
+                SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data,Toekn = AuthenticationToken };
                 RecieveSyncEvent.Reset();
 
                 var d = MessagePackSerializer.Serialize(packet);
@@ -353,5 +355,11 @@ namespace Sockety.Client
                 Task.Run(() => method.Invoke(Parent, null));
             }
         }
+
+        public void SetAuthenticationToken(string token)
+        {
+           AuthenticationToken.Toekn = token;
+        }
+
     }
 }
