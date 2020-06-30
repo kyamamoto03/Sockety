@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Sockety.Filter;
 using Sockety.Model;
 using Sockety.Server;
 using System;
@@ -11,6 +12,14 @@ using System.Threading.Tasks;
 
 namespace SocketyServer
 {
+    class LocalAuthentificationFilter : IAuthenticationFIlter
+    {
+        public bool Authentication(AuthenticationToken toekn)
+        {
+            return true;
+        }
+    }
+
     class ServerLoop : IHostedService, IDisposable, IService
     {
         #region IHostedService
@@ -76,6 +85,11 @@ namespace SocketyServer
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PortNumber);
             var serverSetting = new ServerSetting { UseSSL = true };
             serverSetting.LoadCertificateFile("test-cert.pfx", "testcert");
+
+            //Filter
+            var authtificationFilter = new LocalAuthentificationFilter();
+            serverCore.SocketyFilters.Add(authtificationFilter);
+
 
             serverCore.Start(localEndPoint:localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
 

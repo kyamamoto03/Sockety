@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Sockety.Filter;
 using Sockety.Model;
 using Sockety.Service;
 using System;
@@ -34,6 +35,8 @@ namespace Sockety.Server
         private TcpListener MainListener;
         private T Parent;
         CancellationTokenSource stoppingCts;
+
+        public SocketyFilters SocketyFilters { get; private set; } = new SocketyFilters();
         /// <summary>
         /// クライアント切断時に発火
         /// </summary>
@@ -118,7 +121,8 @@ namespace Sockety.Server
                             _clientInfo: clientInfo,
                             udpPort: CanUDPConnectPort,
                             userClass: Parent,
-                            logger: Logger);
+                            logger: Logger,
+                            _filters: SocketyFilters);
 
 
                         clientHub.ConnectionReset = ConnectionReset;

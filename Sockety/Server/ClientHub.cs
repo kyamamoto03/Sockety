@@ -1,9 +1,11 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using Sockety.Base;
+using Sockety.Filter;
 using Sockety.Model;
 using Sockety.Service;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using System.Threading;
@@ -26,6 +28,7 @@ namespace Sockety.Server
         public Action<ClientInfo> ConnectionReset;
         private readonly CancellationTokenSource _stoppingCts = new CancellationTokenSource();
         private readonly ILogger Logger;
+        private SocketyFilters SocketyFilters;
 
         public void ThreadCancel()
         {
@@ -38,7 +41,8 @@ namespace Sockety.Server
             ClientInfo _clientInfo,
             UdpPort<T> udpPort,
             T userClass,
-            ILogger logger)
+            ILogger logger,
+            SocketyFilters _filters)
         {
             this.UserClass = userClass;
             this.serverSocket = _handler;
@@ -46,6 +50,7 @@ namespace Sockety.Server
             this.UdpPort = udpPort;
             this.Logger = logger;
             this.commnicateStream = _stream;
+            this.SocketyFilters = _filters;
 
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(userClass);
@@ -236,15 +241,31 @@ namespace Sockety.Server
 
                         var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
 
-                        //メソッドの戻り値を詰め替える
-                        packet.PackData = await InvokeMethodAsync(packet);
+                        //AuthentificationFilter
+                        bool AuthentificationSuccess = true;
+                        var authentificationFilter = SocketyFilters.Get<IAuthenticationFIlter>();
+                        if (authentificationFilter != null)
+                        {
+                            AuthentificationSuccess = authentificationFilter.Authentication(packet.Toekn);
+                        }
+
+                        if (AuthentificationSuccess == true)
+                        {
+                            //メソッドの戻り値を詰め替える
+                            packet.PackData = await InvokeMethodAsync(packet);
 
 
-                        //InvokeMethodAsyncの戻り値を送り返す
-                        var d = MessagePackSerializer.Serialize(packet);
-                        sizeb = BitConverter.GetBytes(d.Length);
-                        commnicateStream.Write(sizeb, 0, sizeof(int));
-                        commnicateStream.Write(d, 0, d.Length);
+                            //InvokeMethodAsyncの戻り値を送り返す
+                            var d = MessagePackSerializer.Serialize(packet);
+                            sizeb = BitConverter.GetBytes(d.Length);
+                            commnicateStream.Write(sizeb, 0, sizeof(int));
+                            commnicateStream.Write(d, 0, d.Length);
+                        }
+                        else
+                        {
+                            //認証失敗は接続を切断
+                            await DisConnect();
+                        }
                     }
                 }
                 catch (IOException ex)

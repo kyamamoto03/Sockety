@@ -16,6 +16,8 @@ namespace Sockety.Model
         public SOCKETY_PAKCET_TYPE SocketyPacketType { get; set; }
         [Key(3)]
         public byte[] PackData { get; set; }
+        [Key(4)]
+        public AuthenticationToken Toekn { get; set; }
 
         public enum SOCKETY_PAKCET_TYPE
         {
