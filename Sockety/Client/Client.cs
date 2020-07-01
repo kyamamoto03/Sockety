@@ -137,10 +137,15 @@ namespace Sockety.Client
                 }
                 return false;
             }
+            catch (SocketException ex)
+            {
+                Logger.LogError("SocketException : {0}", ex.ToString());
+                return false;
+            }
             catch (Exception e)
             {
                 Logger.LogError("Unexpected exception : {0}", e.ToString());
-                throw e;
+                //throw e;
             }
             return true;
         }

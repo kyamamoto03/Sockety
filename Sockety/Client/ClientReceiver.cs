@@ -143,10 +143,17 @@ namespace Sockety.Client
 
                 var d = MessagePackSerializer.Serialize(packet);
                 var sizeb = BitConverter.GetBytes(d.Length);
-                stream.Write(sizeb, 0, sizeof(int));
+                try
+                {
+                    stream.Write(sizeb, 0, sizeof(int));
 
-                stream.Write(d, 0, d.Length);
-                RecieveSyncEvent.WaitOne();
+                    stream.Write(d, 0, d.Length);
+                }
+                catch { }
+                finally
+                {
+                    RecieveSyncEvent.WaitOne();
+                }
 
             }
             return ServerResponse;
@@ -229,6 +236,7 @@ namespace Sockety.Client
                         catch
                         {
                             Console.WriteLine("MessagePack Fail");
+                            break;
                         }
 
                         if (packet != null)
