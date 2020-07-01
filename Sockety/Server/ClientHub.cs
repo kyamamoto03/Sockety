@@ -20,7 +20,6 @@ namespace Sockety.Server
         private TcpClient serverSocket = null;
         private Stream commnicateStream;
 
-        private Thread TcpThread;
         public ClientInfo ClientInfo { get; private set; }
         private T UserClass;
         private UdpPort<T> UdpPort;
@@ -180,6 +179,10 @@ namespace Sockety.Server
             {
                 StateObject state = (StateObject)ar.AsyncState;
                 Socket client = state.workSocket;
+                if (UdpPort.IsConnect == false)
+                {
+                    return;
+                }
                 int bytesRead = client.EndReceive(ar);
                 if (bytesRead > 0)
                 {
@@ -317,6 +320,11 @@ namespace Sockety.Server
             serverSocket = null;
             //通信切断
             await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
+
+            //Udpのポートが使えるようにする
+            UdpPort.IsConnect = false;
+            //Udpの切断処理
+            UdpPort.PunchingSocket.Close();
         }
 
         private MethodInfo GetMethod(SocketyPacket packet)
