@@ -232,6 +232,7 @@ namespace Sockety.Client
                         if (KillSW == true)
                         {
                             Console.WriteLine("ReceiveProcess Kill2");
+                            TcpReceiveThreadFinishEvent.Set();
                             return;
                         }
 
