@@ -163,7 +163,7 @@ namespace Sockety.Client
                 {
                     //if (RecieveSyncEvent.WaitOne(1000) == false)
                     //{
-                    //    Console.WriteLine("WaitOne Error");
+                    //    System.Diagnostics.Debug.WriteLine("WaitOne Error");
                     //    throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.ERROR);
                     //}
                     RecieveSyncEvent.WaitOne();
@@ -184,7 +184,7 @@ namespace Sockety.Client
             {
                 if (KillSW == true)
                 {
-                    Console.WriteLine("UdpReceiveProcess Kill");
+                    System.Diagnostics.Debug.WriteLine("UdpReceiveProcess Kill");
                     UdpReceiveThreadFinishEvent.Set();
                     return;
                 }
@@ -197,7 +197,7 @@ namespace Sockety.Client
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.ToString());
+                    System.Diagnostics.Debug.WriteLine(ex.ToString());
                 }
             }
         }
@@ -213,7 +213,7 @@ namespace Sockety.Client
             {
                 if (KillSW == true)
                 {
-                    Console.WriteLine("ReceiveProcess Kill");
+                    System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill");
                     TcpReceiveThreadFinishEvent.Set();
                     return;
                 }
@@ -231,14 +231,14 @@ namespace Sockety.Client
                     {
                         if (KillSW == true)
                         {
-                            Console.WriteLine("ReceiveProcess Kill2");
+                            System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill2");
                             TcpReceiveThreadFinishEvent.Set();
                             return;
                         }
 
                         if (serverSocket.Connected == false || Connected == false)
                         {
-                            Console.WriteLine("Break");
+                            System.Diagnostics.Debug.WriteLine("Break");
                             TcpReceiveThreadFinishEvent.Set();
                             return;
                         }
@@ -260,7 +260,7 @@ namespace Sockety.Client
                         }
                         catch
                         {
-                            Console.WriteLine("MessagePack Fail");
+                            System.Diagnostics.Debug.WriteLine("MessagePack Fail");
                             packet = null;
                         }
                         if (packet != null)
@@ -308,7 +308,7 @@ namespace Sockety.Client
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.ToString());
+                    System.Diagnostics.Debug.WriteLine(ex.ToString());
                 }
                 Thread.Sleep(10);
             }
@@ -320,7 +320,7 @@ namespace Sockety.Client
         private void ConnectionLost(string LostMethod = "")
         {
             KillSW = true;
-            Console.WriteLine($"{LostMethod}:ConnectionLost");
+            System.Diagnostics.Debug.WriteLine($"{LostMethod}:ConnectionLost");
             
             Connected = false;
             RecieveSyncEvent.Set();
@@ -329,11 +329,12 @@ namespace Sockety.Client
                 serverUdpSocket.Close();
                 serverUdpSocket = null;
             }
+            stream.Close();
 
-            Console.WriteLine("Thread終了待ち");
+            System.Diagnostics.Debug.WriteLine("Thread終了待ち");
             TcpReceiveThreadFinishEvent.WaitOne();
             UdpReceiveThreadFinishEvent.WaitOne();
-            Console.WriteLine("Thread終了");
+            System.Diagnostics.Debug.WriteLine("Thread終了");
 
             //再切断呼び出し
             Task.Run(() => ConnectionReset?.Invoke());
