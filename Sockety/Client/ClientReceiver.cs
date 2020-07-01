@@ -239,6 +239,7 @@ namespace Sockety.Client
                         if (serverSocket.Connected == false || Connected == false)
                         {
                             Console.WriteLine("Break");
+                            TcpReceiveThreadFinishEvent.Set();
                             return;
                         }
                         else
