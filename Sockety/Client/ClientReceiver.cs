@@ -98,9 +98,11 @@ namespace Sockety.Client
             UdpReceiveThreadFinishEvent.Reset();
 
             TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
+            TcpReceiveThread.Name = "ReceiveProcess";
             TcpReceiveThread.Start();
 
             UdpReceiveThread = new Thread(new ThreadStart(UdpReceiveProcess));
+            UdpReceiveThread.Name = "UdpReceiveProcess";
             UdpReceiveThread.Start();
 
             SurveillanceHeartBeat();
