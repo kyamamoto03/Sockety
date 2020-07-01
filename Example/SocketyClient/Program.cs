@@ -74,8 +74,15 @@ namespace SocketyClient
 
             while (true)
             {
-                echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
-                Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
+                try
+                {
+                    echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+                    if (echoData != null)
+                    {
+                        Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
+                    }
+                }
+                catch(SocketyException) { }
                 client.UdpSend(Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
 
                 //var t = Encoding.ASCII.GetBytes("UDP Test");

@@ -90,8 +90,12 @@ namespace Sockety.Client
             Connected = true;
             stream = _stream;
 
+            KillSW = false;
             PacketSerivce = new PacketSerivce<T>();
             PacketSerivce.SetUp(parent);
+
+            TcpReceiveThreadFinishEvent.Reset();
+            UdpReceiveThreadFinishEvent.Reset();
 
             TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpReceiveThread.Start();
@@ -102,20 +106,24 @@ namespace Sockety.Client
             SurveillanceHeartBeat();
         }
 
+        object serverUdpSocketlock = new object();
         /// <summary>
         /// UDP送信
         /// </summary>
         /// <param name="data"></param>
         internal void UdpSend(SocketyPacketUDP packet)
         {
-            if (serverUdpSocket == null)
-            {
-                return;
-            }
+            lock (serverUdpSocketlock)
+            { 
+                if (serverUdpSocket == null)
+                {
+                    return;
+                }
 
             var bytes = MessagePackSerializer.Serialize(packet);
 
             serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
+            }
         }
 
         private object SendLock = new object();
@@ -129,7 +137,7 @@ namespace Sockety.Client
         {
             lock (SendLock)
             {
-                if (serverSocket == null || serverSocket.Connected == false)
+                if (serverSocket == null || serverSocket.Connected == false || Connected == false)
                 {
                     return null;
                 }
@@ -140,6 +148,7 @@ namespace Sockety.Client
                 }
                 SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data,Toekn = AuthenticationToken };
                 RecieveSyncEvent.Reset();
+                ServerResponse = null;
 
                 var d = MessagePackSerializer.Serialize(packet);
                 var sizeb = BitConverter.GetBytes(d.Length);
@@ -152,6 +161,11 @@ namespace Sockety.Client
                 catch { }
                 finally
                 {
+                    //if (RecieveSyncEvent.WaitOne(1000) == false)
+                    //{
+                    //    Console.WriteLine("WaitOne Error");
+                    //    throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.ERROR);
+                    //}
                     RecieveSyncEvent.WaitOne();
                 }
 
@@ -168,6 +182,12 @@ namespace Sockety.Client
 
             while (true)
             {
+                if (KillSW == true)
+                {
+                    Console.WriteLine("UdpReceiveProcess Kill");
+                    UdpReceiveThreadFinishEvent.Set();
+                    return;
+                }
                 try
                 {
                     serverUdpSocket.Receive(CommunicateBuffer);
@@ -177,13 +197,12 @@ namespace Sockety.Client
                 }
                 catch (Exception ex)
                 {
-                    ////通信切断
-                    Connected = false;
-                    return;
+                    Console.WriteLine(ex.ToString());
                 }
             }
         }
 
+        bool KillSW = false;
         /// <summary>
         /// TCP受信用スレッド
         /// </summary>
@@ -192,16 +211,14 @@ namespace Sockety.Client
             byte[] sizeb = new byte[sizeof(int)];
             while (true)
             {
+                if (KillSW == true)
+                {
+                    Console.WriteLine("ReceiveProcess Kill");
+                    TcpReceiveThreadFinishEvent.Set();
+                    return;
+                }
                 try
                 {
-                    if (serverSocket.Connected == false || Connected == false)
-                    {
-                        ConnectionLost();
-
-                        //受信スレッド終了
-                        return;
-
-                    }
                     //データサイズ受信
                     int bytesRec = stream.Read(sizeb, 0, sizeof(int));
                     int size = BitConverter.ToInt32(sizeb, 0);
@@ -212,6 +229,12 @@ namespace Sockety.Client
                     int DataSize = 0;
                     do
                     {
+                        if (KillSW == true)
+                        {
+                            Console.WriteLine("ReceiveProcess Kill2");
+                            return;
+                        }
+
                         if (serverSocket.Connected == false || Connected == false)
                         {
                             Console.WriteLine("Break");
@@ -236,9 +259,8 @@ namespace Sockety.Client
                         catch
                         {
                             Console.WriteLine("MessagePack Fail");
-                            break;
+                            packet = null;
                         }
-
                         if (packet != null)
                         {
                             lock (RecieveSyncEvent)
@@ -264,6 +286,7 @@ namespace Sockety.Client
                                 }
                             }
                         }
+
                     }
                     else
                     {
@@ -275,10 +298,10 @@ namespace Sockety.Client
                     //通信切断処理
                     if (ex.HResult == -2146232800)
                     {
-                        ConnectionLost();
+                        //ConnectionLost("ReceiveProcess2");
 
                         //受信スレッド終了
-                        return;
+                        //return;
                     }
                 }
                 catch (Exception ex)
@@ -288,10 +311,28 @@ namespace Sockety.Client
                 Thread.Sleep(10);
             }
         }
-        private void ConnectionLost()
+
+        private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
+
+        private void ConnectionLost(string LostMethod = "")
         {
+            KillSW = true;
+            Console.WriteLine($"{LostMethod}:ConnectionLost");
+            
             Connected = false;
             RecieveSyncEvent.Set();
+            lock (serverUdpSocketlock)
+            {
+                serverUdpSocket.Close();
+                serverUdpSocket = null;
+            }
+
+            Console.WriteLine("Thread終了待ち");
+            TcpReceiveThreadFinishEvent.WaitOne();
+            UdpReceiveThreadFinishEvent.WaitOne();
+            Console.WriteLine("Thread終了");
+
             //再切断呼び出し
             Task.Run(() => ConnectionReset?.Invoke());
         }
@@ -327,8 +368,7 @@ namespace Sockety.Client
                             var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
                             if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
                             {
-                                Console.WriteLine("ConnectionLost");
-                                ConnectionLost();
+                                ConnectionLost("SurveillanceHeartBeat");
                                 //監視終了
                                 return;
                             }

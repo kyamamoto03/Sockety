@@ -13,7 +13,8 @@ namespace Sockety.Model
             /// <summary>
             /// クライアント不明
             /// </summary>
-            NO_CLIENT
+            NO_CLIENT,
+            ERROR
         }
 
         public SOCKETY_EXCEPTION_ERROR SocketyErrorCode { get; private set; }

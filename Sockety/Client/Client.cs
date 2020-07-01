@@ -47,9 +47,6 @@ namespace Sockety.Client
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = parent;
 
-            //新規の接続なのでClientInfoを作成
-            clientInfo = CreateNewClientInfo(UserName);
-
             return ConnectProcess(CONNECT_TYPE.NEW_CONNECT);
         }
 
@@ -91,6 +88,9 @@ namespace Sockety.Client
                 //TCP接続
                 serverSocket = new TcpClient(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
                 var serverSetting = ReceiveServerSetting(serverSocket.GetStream());
+
+                //新規の接続なのでClientInfoを作成
+                clientInfo = CreateNewClientInfo(UserName);
 
 
                 Stream CommunicateStream;
@@ -139,7 +139,7 @@ namespace Sockety.Client
             }
             catch (SocketException ex)
             {
-                Logger.LogError("SocketException : {0}", ex.ToString());
+                //Logger.LogError("SocketException : {0}", ex.ToString());
                 return false;
             }
             catch (Exception e)
