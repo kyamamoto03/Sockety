@@ -91,11 +91,11 @@ namespace Sockety.Client
 
 
         internal void Run(
-            TcpClient handler, 
+            TcpClient handler,
             Stream _stream,
             Socket UdpSocket,
             IPEndPoint UdpEndPort,
-            ClientInfo clientInfo, 
+            ClientInfo clientInfo,
             T parent)
         {
             Parent = parent;
@@ -131,15 +131,14 @@ namespace Sockety.Client
         internal void UdpSend(SocketyPacketUDP packet)
         {
             lock (serverUdpSocketlock)
-            { 
+            {
                 if (serverUdpSocket == null)
                 {
                     return;
                 }
 
-            var bytes = MessagePackSerializer.Serialize(packet);
-
-            serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
+                var bytes = MessagePackSerializer.Serialize(packet);
+                serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
             }
         }
 
@@ -162,7 +161,7 @@ namespace Sockety.Client
                 {
                     ServerCallMethodName = serverMethodName;
                 }
-                SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data,Toekn = AuthenticationToken };
+                SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data, Toekn = AuthenticationToken };
                 RecieveSyncEvent.Reset();
                 ServerResponse = null;
 
@@ -189,7 +188,6 @@ namespace Sockety.Client
         /// </summary>
         private void UdpReceiveProcess()
         {
-            var CommunicateBuffer = new byte[SocketySetting.MAX_BUFFER];
 
             while (true)
             {
@@ -201,6 +199,7 @@ namespace Sockety.Client
                 }
                 try
                 {
+                    var CommunicateBuffer = new byte[SocketySetting.MAX_UDP_SIZE];
                     serverUdpSocket.Receive(CommunicateBuffer);
                     var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
 
@@ -329,7 +328,7 @@ namespace Sockety.Client
         {
             ThreadCancellationToken.Cancel();
             System.Diagnostics.Debug.WriteLine($"{LostMethod}:ConnectionLost");
-            
+
             Connected = false;
             RecieveSyncEvent.Set();
             lock (serverUdpSocketlock)
@@ -353,7 +352,7 @@ namespace Sockety.Client
         {
             Task.Run(async () =>
             {
-                while (serverSocket != null)
+                while (!ThreadCancellationToken.Token.IsCancellationRequested)
                 {
                     await SendHeartBeat();
                     Thread.Sleep(1000);
@@ -408,7 +407,7 @@ namespace Sockety.Client
                     lock (ReceiveHeartBeats)
                     {
                         var LastHeartBeat = ReceiveHeartBeats.OrderByDescending(x => x.ReceiveDate).FirstOrDefault();
-                        if(LastHeartBeat != null)
+                        if (LastHeartBeat != null)
                         {
                             var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
                             if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
@@ -451,7 +450,7 @@ namespace Sockety.Client
 
         public void SetAuthenticationToken(string token)
         {
-           AuthenticationToken.Toekn = token;
+            AuthenticationToken.Toekn = token;
         }
 
     }

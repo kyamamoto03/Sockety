@@ -238,8 +238,6 @@ namespace Sockety.Server
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
 
-            //パケット分割
-            //var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
             var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = Guid.NewGuid(), PacketNo = 1,PackData = data };
 
             List<ClientHub<T>> SendLists;
@@ -330,25 +328,8 @@ namespace Sockety.Server
                 }
                 catch (IOException)
                 {
-                    //切断が発覚したので、切断リストに追加
-                    DisConnction.Add(x);
                 }
             });
-
-            if (DisConnction.Count > 0)
-            {
-                //切断処理を行う
-                DisConnction.ForEach(x =>
-                {
-                    SocketClient<T>.GetInstance().RemoveClientHub(x);
-                    x.ThreadCancel();
-                    Logger.LogInformation($"BroadCastNoReturn DisConnect:{x.ClientInfo.ClientID}");
-
-                    //通信切断
-                    Task.Run(() => ConnectionReset?.Invoke(x.ClientInfo));
-                });
-            }
-
         }
 
         /// <summary>
@@ -373,12 +354,6 @@ namespace Sockety.Server
                 }
                 catch (IOException)
                 {
-                    SocketClient<T>.GetInstance().RemoveClientHub(SendClientHub);
-                    SendClientHub.ThreadCancel();
-                    Logger.LogInformation($"SendNoReturn DisConnect:{SendClientHub.ClientInfo.ClientID}");
-
-                    //通信切断
-                    Task.Run(() => ConnectionReset?.Invoke(SendClientHub.ClientInfo));
                 }
             }
             else

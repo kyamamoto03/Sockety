@@ -31,6 +31,15 @@ namespace Sockety.Server
         private readonly ILogger Logger;
         private SocketyFilters SocketyFilters;
 
+        /// <summary>
+        /// TCP受信スレッド終了イベント
+        /// </summary>
+        private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        /// <summary>
+        /// UDP受信スレッド終了イベント
+        /// </summary>
+        private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
+
         public void ThreadCancel()
         {
             _stoppingCts.Cancel();
@@ -74,11 +83,12 @@ namespace Sockety.Server
         {
             Task.Run(async () =>
             {
-                while(serverSocket != null)
+                while(!_stoppingCts.IsCancellationRequested)
                 {
                     await SendHeartBeat();
                     Thread.Sleep(1000);
                 }
+                Logger.LogInformation("MakeHeartBeat Done");
             });
         }
         private async Task SendHeartBeat()
@@ -217,8 +227,9 @@ namespace Sockety.Server
             {
                 StateObject state = (StateObject)ar.AsyncState;
                 Socket client = state.workSocket;
-                if (UdpPort.IsConnect == false)
+                if (_stoppingCts.IsCancellationRequested)
                 {
+                    UdpReceiveThreadFinishEvent.Set();
                     return;
                 }
                 int bytesRead = client.EndReceive(ar);
@@ -257,19 +268,14 @@ namespace Sockety.Server
                 {
                     if (serverSocket == null)
                     {
+                        TcpReceiveThreadFinishEvent.Set();
                         return;
                     }
 
                     int bytesRec = commnicateStream.Read(sizeb, 0, sizeof(int));
                     using (await TCPReceiveLock.LockAsync())
                     {
-                        if (bytesRec == 0)
-                        {
-                            //await DisConnect();
-                            ////受信スレッド終了
-                            //return;
-                        }
-                        else
+                        if (bytesRec > 0)
                         {
                             int size = BitConverter.ToInt32(sizeb, 0);
 
@@ -337,14 +343,6 @@ namespace Sockety.Server
                 }
                 catch (IOException ex)
                 {
-                    //if (ex.HResult == -2146232800)
-                    //{
-                    //    await DisConnect();
-
-                    //    //受信スレッド終了
-                    //    return;
-                    //}
-
                 }
                 catch (Exception ex)
                 {
@@ -368,6 +366,9 @@ namespace Sockety.Server
             //通信切断
             await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
 
+            ThreadCancel();
+            TcpReceiveThreadFinishEvent.WaitOne();
+            UdpReceiveThreadFinishEvent.WaitOne();
             //Udpのポートが使えるようにする
             UdpPort.IsConnect = false;
             //Udpの切断処理
