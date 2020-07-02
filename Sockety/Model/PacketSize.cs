@@ -8,13 +8,15 @@ namespace Sockety.Model
     {
         public byte[] Header { get; set; } = new byte[4];
         public int Size { get; set; }
-        public static PacketSize Create()
+        public static PacketSize Create(int size)
         {
             PacketSize ret = new PacketSize();
             ret.Header[0] = 0x01;
             ret.Header[1] = 0x02;
             ret.Header[2] = 0x03;
             ret.Header[3] = 0x04;
+
+            ret.Size = size;
             return ret;
         }
 

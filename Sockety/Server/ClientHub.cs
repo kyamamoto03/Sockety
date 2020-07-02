@@ -99,8 +99,7 @@ namespace Sockety.Server
                 {
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
-                    PacketSize size = PacketSize.Create();
-                    size.Size = d.Length;
+                    PacketSize size = PacketSize.Create(d.Length);
                     var sizeb = size.GetBytes();
                     commnicateStream.Write(sizeb, 0, sizeb.Length);
 
@@ -169,8 +168,7 @@ namespace Sockety.Server
                     var d = MessagePackSerializer.Serialize(packet);
                     if (serverSocket != null)
                     {
-                        PacketSize size = PacketSize.Create();
-                        size.Size = d.Length;
+                        PacketSize size = PacketSize.Create(d.Length);
                         var sizeb = size.GetBytes();
                         commnicateStream.Write(sizeb, 0, sizeb.Length);
                         commnicateStream.Write(d, 0, d.Length);
@@ -333,8 +331,7 @@ namespace Sockety.Server
 
                                     //InvokeMethodAsyncの戻り値を送り返す
                                     var d = MessagePackSerializer.Serialize(packet);
-                                    PacketSize packetSize = PacketSize.Create();
-                                    packetSize.Size = d.Length;
+                                    PacketSize packetSize = PacketSize.Create(d.Length);
                                     var sizeb2 = packetSize.GetBytes();
                                     commnicateStream.Write(sizeb2, 0, sizeb2.Length);
                                     commnicateStream.Write(d, 0, d.Length);
