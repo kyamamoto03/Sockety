@@ -53,6 +53,24 @@ namespace Sockety.Client
 
         internal AuthenticationToken AuthenticationToken = new AuthenticationToken();
 
+        /// <summary>
+        /// TCP,UDP受信スレッドキャンセルトークン
+        /// </summary>
+        private CancellationTokenSource ThreadCancellationToken;
+
+        /// <summary>
+        /// TCP受信スレッド終了イベント
+        /// </summary>
+        private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        /// <summary>
+        /// UDP受信スレッド終了イベント
+        /// </summary>
+        private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        /// <summary>
+        /// TCP排他ロック
+        /// </summary>
+        private AsyncLock TCPReceiveLock = new AsyncLock();
+
         #region IDisposable
         public void Dispose()
         {
@@ -88,7 +106,7 @@ namespace Sockety.Client
             Connected = true;
             stream = _stream;
 
-            KillSW = false;
+            ThreadCancellationToken = new CancellationTokenSource();
 
             TcpReceiveThreadFinishEvent.Reset();
             UdpReceiveThreadFinishEvent.Reset();
@@ -125,7 +143,6 @@ namespace Sockety.Client
             }
         }
 
-        private object SendLock = new object();
         /// <summary>
         /// サーバメソッド呼び出し（サーバのレスポンスを待つ）
         /// </summary>
@@ -134,7 +151,6 @@ namespace Sockety.Client
         /// <returns></returns>
         internal async Task<byte[]> Send(string serverMethodName, byte[] data)
         {
-            //lock (SendLock)
             using (await TCPReceiveLock.LockAsync())
             {
                 if (serverSocket == null || serverSocket.Connected == false || Connected == false)
@@ -161,11 +177,6 @@ namespace Sockety.Client
                 catch { }
                 finally
                 {
-                    //if (RecieveSyncEvent.WaitOne(1000) == false)
-                    //{
-                    //    System.Diagnostics.Debug.WriteLine("WaitOne Error");
-                    //    throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.ERROR);
-                    //}
                     RecieveSyncEvent.WaitOne();
                 }
 
@@ -182,7 +193,7 @@ namespace Sockety.Client
 
             while (true)
             {
-                if (KillSW == true)
+                if (ThreadCancellationToken.Token.IsCancellationRequested)
                 {
                     System.Diagnostics.Debug.WriteLine("UdpReceiveProcess Kill");
                     UdpReceiveThreadFinishEvent.Set();
@@ -202,7 +213,6 @@ namespace Sockety.Client
             }
         }
 
-        bool KillSW = false;
         /// <summary>
         /// TCP受信用スレッド
         /// </summary>
@@ -211,7 +221,7 @@ namespace Sockety.Client
             byte[] sizeb = new byte[sizeof(int)];
             while (true)
             {
-                if (KillSW == true)
+                if (ThreadCancellationToken.Token.IsCancellationRequested)
                 {
                     System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill");
                     TcpReceiveThreadFinishEvent.Set();
@@ -229,7 +239,7 @@ namespace Sockety.Client
                     int DataSize = 0;
                     do
                     {
-                        if (KillSW == true)
+                        if (ThreadCancellationToken.Token.IsCancellationRequested == true)
                         {
                             System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill2");
                             TcpReceiveThreadFinishEvent.Set();
@@ -314,13 +324,10 @@ namespace Sockety.Client
             }
         }
 
-        private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
-        private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
-        private AsyncLock TCPReceiveLock = new AsyncLock();
 
         private void ConnectionLost(string LostMethod = "")
         {
-            KillSW = true;
+            ThreadCancellationToken.Cancel();
             System.Diagnostics.Debug.WriteLine($"{LostMethod}:ConnectionLost");
             
             Connected = false;

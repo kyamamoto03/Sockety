@@ -54,7 +54,9 @@ namespace Sockety.Server
 
             MakeHeartBeat();
 
+#pragma warning disable CS4014 // この呼び出しは待機されなかったため、現在のメソッドの実行は呼び出しの完了を待たずに続行されます
             SurveillanceHeartBeat();
+#pragma warning restore CS4014 // この呼び出しは待機されなかったため、現在のメソッドの実行は呼び出しの完了を待たずに続行されます
         }
 
         public void Dispose()
@@ -94,8 +96,6 @@ namespace Sockety.Server
             }
             catch (IOException ex)
             {
-                Console.WriteLine("SendHeartBeat:DisConnect");
-                //await DisConnect();
             }
             catch (Exception ex)
             {
@@ -164,7 +164,6 @@ namespace Sockety.Server
             }
             catch (IOException ex)
             {
-                Logger.LogInformation(ex.ToString());
                 return;
             }
             catch (Exception ex)
@@ -240,7 +239,7 @@ namespace Sockety.Server
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Logger.LogInformation(e.ToString());
             }
         }
 
