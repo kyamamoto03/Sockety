@@ -1,7 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using Sockety.Model;
-using Sockety.Service;
 using System;
 using System.IO;
 using System.Linq;
@@ -11,6 +10,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Schema;
 
 namespace Sockety.Client
@@ -258,13 +258,13 @@ namespace Sockety.Client
         /// <param name="serverMethodName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        public byte[] Send(string serverMethodName, byte[] data)
+        public async Task<byte[]> Send(string serverMethodName, byte[] data)
         {
             if (data != null && data.Length > SocketySetting.MAX_BUFFER)
             {
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
-            return clientReceiver.Send(serverMethodName, data);
+            return await clientReceiver.Send(serverMethodName, data);
         }
 
         /// <summary>
@@ -277,13 +277,11 @@ namespace Sockety.Client
             {
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
-            //パケット分割
-            var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
 
-            packets.ForEach(x =>
-            {
-                clientReceiver.UdpSend(x);
-            });
+            var packetID = Guid.NewGuid();
+
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = 1,PackData = data };
+            clientReceiver.UdpSend(packet);
         }
 
         public void SetAuthenticationToken(string token)

@@ -1,7 +1,6 @@
 ﻿using MessagePack;
-using Microsoft.Extensions.Logging;
+using Sockety.Base;
 using Sockety.Model;
-using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -51,9 +50,26 @@ namespace Sockety.Client
         private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
         private T Parent;
-        PacketSerivce<T> PacketSerivce;
 
         internal AuthenticationToken AuthenticationToken = new AuthenticationToken();
+
+        /// <summary>
+        /// TCP,UDP受信スレッドキャンセルトークン
+        /// </summary>
+        private CancellationTokenSource ThreadCancellationToken;
+
+        /// <summary>
+        /// TCP受信スレッド終了イベント
+        /// </summary>
+        private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        /// <summary>
+        /// UDP受信スレッド終了イベント
+        /// </summary>
+        private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        /// <summary>
+        /// TCP排他ロック
+        /// </summary>
+        private AsyncLock TCPReceiveLock = new AsyncLock();
 
         #region IDisposable
         public void Dispose()
@@ -90,9 +106,7 @@ namespace Sockety.Client
             Connected = true;
             stream = _stream;
 
-            KillSW = false;
-            PacketSerivce = new PacketSerivce<T>();
-            PacketSerivce.SetUp(parent);
+            ThreadCancellationToken = new CancellationTokenSource();
 
             TcpReceiveThreadFinishEvent.Reset();
             UdpReceiveThreadFinishEvent.Reset();
@@ -105,6 +119,7 @@ namespace Sockety.Client
             UdpReceiveThread.Name = "UdpReceiveProcess";
             UdpReceiveThread.Start();
 
+            MakeHeartBeat();
             SurveillanceHeartBeat();
         }
 
@@ -128,16 +143,15 @@ namespace Sockety.Client
             }
         }
 
-        private object SendLock = new object();
         /// <summary>
         /// サーバメソッド呼び出し（サーバのレスポンスを待つ）
         /// </summary>
         /// <param name="serverMethodName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        internal byte[] Send(string serverMethodName, byte[] data)
+        internal async Task<byte[]> Send(string serverMethodName, byte[] data)
         {
-            lock (SendLock)
+            using (await TCPReceiveLock.LockAsync())
             {
                 if (serverSocket == null || serverSocket.Connected == false || Connected == false)
                 {
@@ -163,11 +177,6 @@ namespace Sockety.Client
                 catch { }
                 finally
                 {
-                    //if (RecieveSyncEvent.WaitOne(1000) == false)
-                    //{
-                    //    System.Diagnostics.Debug.WriteLine("WaitOne Error");
-                    //    throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.ERROR);
-                    //}
                     RecieveSyncEvent.WaitOne();
                 }
 
@@ -184,7 +193,7 @@ namespace Sockety.Client
 
             while (true)
             {
-                if (KillSW == true)
+                if (ThreadCancellationToken.Token.IsCancellationRequested)
                 {
                     System.Diagnostics.Debug.WriteLine("UdpReceiveProcess Kill");
                     UdpReceiveThreadFinishEvent.Set();
@@ -195,7 +204,7 @@ namespace Sockety.Client
                     serverUdpSocket.Receive(CommunicateBuffer);
                     var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
 
-                    Task.Run(() => PacketSerivce.ReceiverSocketyPacketUDP(packet));
+                    Task.Run(() => Parent.UdpReceive(packet.clientInfo, packet.PackData));
                 }
                 catch (Exception ex)
                 {
@@ -204,7 +213,6 @@ namespace Sockety.Client
             }
         }
 
-        bool KillSW = false;
         /// <summary>
         /// TCP受信用スレッド
         /// </summary>
@@ -213,7 +221,7 @@ namespace Sockety.Client
             byte[] sizeb = new byte[sizeof(int)];
             while (true)
             {
-                if (KillSW == true)
+                if (ThreadCancellationToken.Token.IsCancellationRequested)
                 {
                     System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill");
                     TcpReceiveThreadFinishEvent.Set();
@@ -231,7 +239,7 @@ namespace Sockety.Client
                     int DataSize = 0;
                     do
                     {
-                        if (KillSW == true)
+                        if (ThreadCancellationToken.Token.IsCancellationRequested == true)
                         {
                             System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill2");
                             TcpReceiveThreadFinishEvent.Set();
@@ -316,12 +324,10 @@ namespace Sockety.Client
             }
         }
 
-        private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
-        private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
 
         private void ConnectionLost(string LostMethod = "")
         {
-            KillSW = true;
+            ThreadCancellationToken.Cancel();
             System.Diagnostics.Debug.WriteLine($"{LostMethod}:ConnectionLost");
             
             Connected = false;
@@ -343,6 +349,40 @@ namespace Sockety.Client
         }
 
         #region HeartBeat
+        private void MakeHeartBeat()
+        {
+            Task.Run(async () =>
+            {
+                while (serverSocket != null)
+                {
+                    await SendHeartBeat();
+                    Thread.Sleep(1000);
+                }
+            });
+        }
+        private async Task SendHeartBeat()
+        {
+            try
+            {
+                using (await TCPReceiveLock.LockAsync())
+                {
+                    var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
+                    var d = MessagePackSerializer.Serialize(packet);
+                    var sizeb = BitConverter.GetBytes(d.Length);
+                    stream.Write(sizeb, 0, sizeof(int));
+                    stream.Write(d, 0, d.Length);
+                }
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine("SendHeartBeat:DisConnect");
+                //await ConnectionLost();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         public List<HeartBeat> ReceiveHeartBeats = new List<HeartBeat>();
         /// <summary>
         /// HeartBeat受信処理
