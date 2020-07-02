@@ -270,10 +270,7 @@ namespace Sockety.Server
 
                 SendLists.ForEach(x =>
                 {
-                    Task.Run(() =>
-                    {
-                        x.SendUdp(packet);
-                    });
+                    x.SendUdp(packet);
                 });
             }
         }
@@ -350,7 +347,7 @@ namespace Sockety.Server
             {
                 try
                 {
-                    SendClientHub.SendNonReturn(ClientMethodName, data);
+                    SendClientHub.SendNonReturn(ClientMethodName, data).Wait();
                 }
                 catch (IOException)
                 {

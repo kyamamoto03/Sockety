@@ -211,10 +211,10 @@ namespace Sockety.Server
             Task.Run( ReceiveProcess);
             //UDPの受信を開始
             var UdpStateObject = new StateObject() { 
-                Buffer = new byte[SocketySetting.MAX_BUFFER], 
+                Buffer = new byte[SocketySetting.MAX_UDP_SIZE], 
                 workSocket = UdpPort.PunchingSocket };
 
-            UdpPort.PunchingSocket.BeginReceive(UdpStateObject.Buffer, 0, UdpStateObject.Buffer.Length, 0, new AsyncCallback(UdpReceiver), UdpStateObject);
+            UdpPort.PunchingSocket.BeginReceive(UdpStateObject.Buffer, 0, UdpStateObject.Buffer.Length, 0, UdpReceiver, UdpStateObject);
         }
 
         /// <summary>
@@ -235,17 +235,13 @@ namespace Sockety.Server
                 int bytesRead = client.EndReceive(ar);
                 if (bytesRead > 0)
                 {
-                    Task.Run(() =>
-                    {
-                        var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(state.Buffer);
-
-                        //親クラスを呼び出す
-                        UserClass.UdpReceive(packet.clientInfo, packet.PackData);
-                    });
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(state.Buffer);
+                    //親クラスを呼び出す
+                    UserClass.UdpReceive(packet.clientInfo, packet.PackData);
 
                     //  受信を再スタート  
                     client.BeginReceive(state.Buffer, 0, state.Buffer.Length, 0,
-                        new AsyncCallback(UdpReceiver), state);
+                        UdpReceiver, state);
                 }
             }
             catch (Exception e)
