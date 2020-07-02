@@ -321,7 +321,7 @@ namespace Sockety.Server
             {
                 try
                 {
-                    await x.SendNonReturn(ClientMethodName, data);
+                    x.SendNonReturn(ClientMethodName, data);
                 }
                 catch (IOException)
                 {
@@ -347,7 +347,7 @@ namespace Sockety.Server
             {
                 try
                 {
-                    SendClientHub.SendNonReturn(ClientMethodName, data).Wait();
+                    SendClientHub.SendNonReturn(ClientMethodName, data);
                 }
                 catch (IOException)
                 {

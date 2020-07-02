@@ -86,6 +86,8 @@ namespace Sockety.Client
             }
             ServerEndPoint = new IPEndPoint(host, PortNumber);
 
+            clientInfo.ConnectDate = DateTime.Now;
+
             try
             {
                 //TCP接続
@@ -121,6 +123,7 @@ namespace Sockety.Client
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
                     clientInfo: clientInfo,
+                    _logger: Logger,
                     Parent);
 
             }

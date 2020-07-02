@@ -99,8 +99,11 @@ namespace Sockety.Server
                 {
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
-                    var sizeb = BitConverter.GetBytes(d.Length);
-                    commnicateStream.Write(sizeb, 0, sizeof(int));
+                    PacketSize size = PacketSize.Create();
+                    size.Size = d.Length;
+                    var sizeb = size.GetBytes();
+                    commnicateStream.Write(sizeb, 0, sizeb.Length);
+
                     commnicateStream.Write(d, 0, d.Length);
                 }
             }
@@ -147,33 +150,36 @@ namespace Sockety.Server
                             }
                         }
                     }
-                    Logger.LogInformation("SurveillanceHeartBeat");
                     Thread.Sleep(5000);
                 }
             });
-            await DisConnect();
+            DisConnect();
         }
 
         #endregion
 
-        internal async Task SendNonReturn(string ClientMethodName, byte[] data)
+        object lockObject = new object();
+        internal void SendNonReturn(string ClientMethodName, byte[] data)
         {
             try
             {
-                using (await TCPReceiveLock.LockAsync())
+                lock(lockObject)
                 {
                     var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                     var d = MessagePackSerializer.Serialize(packet);
-                    var sizeb = BitConverter.GetBytes(d.Length);
                     if (serverSocket != null)
                     {
-                        commnicateStream.Write(sizeb, 0, sizeof(int));
+                        PacketSize size = PacketSize.Create();
+                        size.Size = d.Length;
+                        var sizeb = size.GetBytes();
+                        commnicateStream.Write(sizeb, 0, sizeb.Length);
                         commnicateStream.Write(d, 0, d.Length);
                     }
                 }
             }
             catch (IOException ex)
             {
+                //Logger.LogError($"SendNonReturn:{ex.ToString()}");
                 return;
             }
             catch (Exception ex)
@@ -208,7 +214,10 @@ namespace Sockety.Server
 
         public void Run()
         {
-            Task.Run( ReceiveProcess);
+            var TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
+            TcpReceiveThread.Name = "ReceiveProcess";
+            TcpReceiveThread.Start();
+
             //UDPの受信を開始
             var UdpStateObject = new StateObject() { 
                 Buffer = new byte[SocketySetting.MAX_UDP_SIZE], 
@@ -254,10 +263,11 @@ namespace Sockety.Server
         /// <summary>
         /// 受信を一括して行う
         /// </summary>
-        private async void ReceiveProcess()
+        private void ReceiveProcess()
         {
             byte[] sizeb = new byte[sizeof(int)];
 
+            Logger.LogInformation("ReceiveProcess Start");
             while (_stoppingCts.IsCancellationRequested == false)
             {
                 try
@@ -269,12 +279,11 @@ namespace Sockety.Server
                     }
 
                     int bytesRec = commnicateStream.Read(sizeb, 0, sizeof(int));
-                    using (await TCPReceiveLock.LockAsync())
+                    lock(lockObject)
                     {
                         if (bytesRec > 0)
                         {
                             int size = BitConverter.ToInt32(sizeb, 0);
-
                             byte[] buffer = new byte[size];
                             int DataSize = 0;
                             do
@@ -319,12 +328,15 @@ namespace Sockety.Server
                                 else
                                 {
                                     //メソッドの戻り値を詰め替える
-                                    packet.PackData = await InvokeMethodAsync(method, packet);
+                                    packet.PackData = InvokeMethod(method, packet);
+                                    Logger.LogInformation(method.Name);
 
                                     //InvokeMethodAsyncの戻り値を送り返す
                                     var d = MessagePackSerializer.Serialize(packet);
-                                    sizeb = BitConverter.GetBytes(d.Length);
-                                    commnicateStream.Write(sizeb, 0, sizeof(int));
+                                    PacketSize packetSize = PacketSize.Create();
+                                    packetSize.Size = d.Length;
+                                    var sizeb2 = packetSize.GetBytes();
+                                    commnicateStream.Write(sizeb2, 0, sizeb2.Length);
                                     commnicateStream.Write(d, 0, d.Length);
                                 }
                             }
@@ -332,7 +344,7 @@ namespace Sockety.Server
                             {
                                 Logger.LogInformation($"Client Authentificateion Fail \r\n{packet.clientInfo.ToString()}");
                                 //認証失敗は接続を切断
-                                await DisConnect();
+                                DisConnect();
                             }
                         }
                     }
@@ -352,7 +364,7 @@ namespace Sockety.Server
         /// クライアント起因による切断処理
         /// </summary>
         /// <returns></returns>
-        private async Task DisConnect()
+        private void DisConnect()
         {
             Logger.LogInformation($"ReceiveProcess DisConnect:{ClientInfo.ClientID}");
 
@@ -360,7 +372,7 @@ namespace Sockety.Server
             SocketClient<T>.GetInstance().ClientHubs.Remove(this);
             serverSocket = null;
             //通信切断
-            await Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
+            Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
 
             ThreadCancel();
             TcpReceiveThreadFinishEvent.WaitOne();
@@ -389,9 +401,9 @@ namespace Sockety.Server
             return method;
         }
 
-        private async Task<byte[]> InvokeMethodAsync(MethodInfo method, SocketyPacket packet)
+        private byte[] InvokeMethod(MethodInfo method, SocketyPacket packet)
         {
-            byte[] ret = (byte[])await Task.Run(() => method.Invoke(UserClass, new object[] { ClientInfo, packet.PackData }));
+            byte[] ret = (byte[])method.Invoke(UserClass, new object[] { ClientInfo, packet.PackData });
 
             return ret;
         }

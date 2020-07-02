@@ -93,7 +93,7 @@ namespace SocketyClient
 
                 //var t = Encoding.ASCII.GetBytes("UDP Test");
                 //client.UdpSend(t);
-                System.Threading.Thread.Sleep(200);
+                System.Threading.Thread.Sleep(1000);
             }
         }
 

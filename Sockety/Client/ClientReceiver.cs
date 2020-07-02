@@ -1,4 +1,5 @@
 ﻿using MessagePack;
+using Microsoft.Extensions.Logging;
 using Sockety.Base;
 using Sockety.Model;
 using System;
@@ -71,6 +72,8 @@ namespace Sockety.Client
         /// </summary>
         private AsyncLock TCPReceiveLock = new AsyncLock();
 
+        private ILogger Logger;
+
         #region IDisposable
         public void Dispose()
         {
@@ -96,6 +99,7 @@ namespace Sockety.Client
             Socket UdpSocket,
             IPEndPoint UdpEndPort,
             ClientInfo clientInfo,
+            ILogger _logger,
             T parent)
         {
             Parent = parent;
@@ -105,6 +109,7 @@ namespace Sockety.Client
             ClientInfo = clientInfo;
             Connected = true;
             stream = _stream;
+            this.Logger = _logger;
 
             ThreadCancellationToken = new CancellationTokenSource();
 
@@ -217,7 +222,7 @@ namespace Sockety.Client
         /// </summary>
         private void ReceiveProcess()
         {
-            byte[] sizeb = new byte[sizeof(int)];
+            byte[] sizeb = new byte[8];
             while (true)
             {
                 if (ThreadCancellationToken.Token.IsCancellationRequested)
@@ -229,95 +234,95 @@ namespace Sockety.Client
                 try
                 {
                     //データサイズ受信
-                    int bytesRec = stream.Read(sizeb, 0, sizeof(int));
-                    int size = BitConverter.ToInt32(sizeb, 0);
-
-                    //データ領域確保
-                    var buffer = new byte[size];
-
-                    int DataSize = 0;
-                    do
+                    int bytesRec = stream.Read(sizeb, 0, sizeb.Length);
+                    var packetSize = PacketSize.FromBytes(sizeb);
+                    
+                    if (packetSize != null && packetSize.Size < SocketySetting.MAX_BUFFER)
                     {
-                        if (ThreadCancellationToken.Token.IsCancellationRequested == true)
-                        {
-                            System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill2");
-                            TcpReceiveThreadFinishEvent.Set();
-                            return;
-                        }
+                        //データ領域確保
+                        var buffer = new byte[packetSize.Size];
 
-                        if (serverSocket.Connected == false || Connected == false)
+                        int DataSize = 0;
+                        do
                         {
-                            System.Diagnostics.Debug.WriteLine("Break");
-                            TcpReceiveThreadFinishEvent.Set();
-                            return;
-                        }
-                        else
-                        {
-                            //データ受信
-                            bytesRec = stream.Read(buffer, DataSize, size - DataSize);
-
-                            DataSize += bytesRec;
-                        }
-                    } while (size > DataSize);
-
-                    if (bytesRec > 0)
-                    {
-                        SocketyPacket packet = null;
-                        try
-                        {
-                            packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
-                        }
-                        catch
-                        {
-                            System.Diagnostics.Debug.WriteLine("MessagePack Fail");
-                            packet = null;
-                        }
-                        if (packet != null)
-                        {
-                            lock (RecieveSyncEvent)
+                            if (ThreadCancellationToken.Token.IsCancellationRequested == true)
                             {
-                                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
-                                {
-                                    ReceiveHeartBeat();
-                                }
-                                else
-                                {
+                                System.Diagnostics.Debug.WriteLine("ReceiveProcess Kill2");
+                                TcpReceiveThreadFinishEvent.Set();
+                                return;
+                            }
 
-                                    if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                            if (serverSocket.Connected == false || Connected == false)
+                            {
+                                System.Diagnostics.Debug.WriteLine("Break");
+                                TcpReceiveThreadFinishEvent.Set();
+                                return;
+                            }
+                            else
+                            {
+                                //データ受信
+                                bytesRec = stream.Read(buffer, DataSize, packetSize.Size - DataSize);
+
+                                DataSize += bytesRec;
+                            }
+                        } while (packetSize.Size > DataSize);
+
+                        if (bytesRec > 0)
+                        {
+                            SocketyPacket packet = null;
+                            try
+                            {
+                                packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
+                            }
+                            catch
+                            {
+                                System.Diagnostics.Debug.WriteLine("MessagePack Fail");
+                                packet = null;
+                            }
+                            if (packet != null)
+                            {
+                                lock (RecieveSyncEvent)
+                                {
+                                    if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
                                     {
-                                        ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
-                                        ServerResponse = packet.PackData;
-                                        RecieveSyncEvent.Set();
+                                        ReceiveHeartBeat();
                                     }
                                     else
                                     {
-                                        ///非同期なので、クライアントメソッドを呼ぶ
-                                        InvokeMethod(packet);
+
+                                        if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                                        {
+                                            ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
+                                            ServerResponse = packet.PackData;
+                                            RecieveSyncEvent.Set();
+                                        }
+                                        else
+                                        {
+                                            ///非同期なので、クライアントメソッドを呼ぶ
+                                            InvokeMethod(packet);
+                                        }
                                     }
                                 }
                             }
-                        }
 
+                        }
+                        else
+                        {
+                            Thread.Sleep(100);
+                        }
                     }
                     else
                     {
-                        Thread.Sleep(100);
+                        Logger.LogError("PacketSize Error");
                     }
                 }
                 catch (IOException ex)
                 {
-                    //通信切断処理
-                    if (ex.HResult == -2146232800)
-                    {
-                        //ConnectionLost("ReceiveProcess2");
-
-                        //受信スレッド終了
-                        //return;
-                    }
+                    Logger.LogInformation(ex.ToString());
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine(ex.ToString());
+                    Logger.LogInformation(ex.ToString());
                 }
                 Thread.Sleep(10);
             }
@@ -374,7 +379,7 @@ namespace Sockety.Client
             }
             catch (IOException ex)
             {
-                Console.WriteLine("SendHeartBeat:DisConnect");
+                Logger.LogInformation("SendHeartBeat:DisConnect");
                 //await ConnectionLost();
             }
             catch (Exception ex)

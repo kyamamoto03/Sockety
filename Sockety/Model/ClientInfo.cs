@@ -12,7 +12,7 @@ namespace Sockety.Model
         [Key(1)]
         public string Name { get; set; }
         [Key(2)]
-        public DateTime ConnectDate { get; private set; } = DateTime.Now;
+        public DateTime ConnectDate { get; set; }
         [Key(3)]
         public List<Group> JoinGroups { get; set; } = new List<Group>();
 

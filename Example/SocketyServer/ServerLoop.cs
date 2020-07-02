@@ -142,7 +142,7 @@ namespace SocketyServer
             serverCore.BroadCastUDPNoReturn(sender, obj);
 
             string str = Encoding.ASCII.GetString(obj);
-            Logger.LogInformation($"UDP Receive sender:{sender.ClientID} data:{str}");
+            //Logger.LogInformation($"UDP Receive sender:{sender.ClientID} data:{str}");
         }
     }
 }
