@@ -137,9 +137,10 @@ namespace Sockety.Client
         /// <param name="serverMethodName"></param>
         /// <param name="data"></param>
         /// <returns></returns>
-        internal byte[] Send(string serverMethodName, byte[] data)
+        internal async Task<byte[]> Send(string serverMethodName, byte[] data)
         {
-            lock (SendLock)
+            //lock (SendLock)
+            using (await TCPReceiveLock.LockAsync())
             {
                 if (serverSocket == null || serverSocket.Connected == false || Connected == false)
                 {

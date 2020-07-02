@@ -142,7 +142,7 @@ namespace Sockety.Server
                             }
                         }
                     }
-
+                    Logger.LogInformation("SurveillanceHeartBeat");
                     Thread.Sleep(5000);
                 }
             });
@@ -297,7 +297,7 @@ namespace Sockety.Server
                             var authentificationFilter = SocketyFilters.Get<IAuthenticationFIlter>();
                             var method = GetMethod(packet);
 
-                            if (authentificationFilter != null)
+                            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.Data && authentificationFilter != null)
                             {
                                 bool FindIgnore = false;
 
@@ -383,6 +383,11 @@ namespace Sockety.Server
         private MethodInfo GetMethod(SocketyPacket packet)
         {
             Type t = UserClass.GetType();
+            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
+            {
+                return null;
+            }
+
             var method = t.GetMethod(packet.MethodName);
 
             if (method == null)

@@ -4,6 +4,7 @@ using Sockety.Model;
 using System;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SocketyClient
 {
@@ -11,8 +12,13 @@ namespace SocketyClient
     {
         static void Main(string[] args)
         {
+            MainProc().Wait();
+        }
+        static async Task MainProc()
+        {
+            Thread.Sleep(5000);
             Work w = new Work();
-            w.Start();
+            await w.Start();
         }
     }
     class Work : IService
@@ -28,7 +34,7 @@ namespace SocketyClient
         }
 
         Client<Work> client;
-        public void Start()
+        public async Task Start()
         {
             var loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -58,7 +64,7 @@ namespace SocketyClient
             {
                 client.Connect("localhost", 11000, "ConsoleApp", this);
 
-                var tokenb = client.Send("Authentification", null);
+                var tokenb = await client.Send("Authentification", null);
 
                 client.SetAuthenticationToken(Encoding.ASCII.GetString(tokenb));
 
@@ -68,15 +74,15 @@ namespace SocketyClient
                 Console.ReadLine();
                 return;
             }
-            client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
-            var echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+            await client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+            var echoData = await client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
             Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
 
             while (true)
             {
                 try
                 {
-                    echoData = client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+                    echoData = await client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
                     if (echoData != null)
                     {
                         Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
