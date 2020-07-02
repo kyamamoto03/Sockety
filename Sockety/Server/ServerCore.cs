@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using Sockety.Filter;
 using Sockety.Model;
-using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +9,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -241,7 +239,8 @@ namespace Sockety.Server
             }
 
             //パケット分割
-            var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
+            //var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = Guid.NewGuid(), PacketNo = 1,PackData = data };
 
             List<ClientHub<T>> SendLists;
             lock (SocketClient<T>.GetInstance().ClientHubs)
@@ -275,8 +274,7 @@ namespace Sockety.Server
                 {
                     Task.Run(() =>
                     {
-                        packets.ForEach(p => x.SendUdp(p));
-                        //Thread.Sleep(5);
+                        x.SendUdp(packet);
                     });
                 });
             }

@@ -1,7 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using Sockety.Model;
-using Sockety.Service;
 using System;
 using System.IO;
 using System.Linq;
@@ -278,13 +277,11 @@ namespace Sockety.Client
             {
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
-            //パケット分割
-            var packets = PacketSerivce<T>.PacketSplit(clientInfo, data);
 
-            packets.ForEach(x =>
-            {
-                clientReceiver.UdpSend(x);
-            });
+            var packetID = Guid.NewGuid();
+
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = 1,PackData = data };
+            clientReceiver.UdpSend(packet);
         }
 
         public void SetAuthenticationToken(string token)

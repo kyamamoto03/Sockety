@@ -1,8 +1,6 @@
 ﻿using MessagePack;
-using Microsoft.Extensions.Logging;
 using Sockety.Base;
 using Sockety.Model;
-using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -52,7 +50,6 @@ namespace Sockety.Client
         private ManualResetEvent RecieveSyncEvent = new ManualResetEvent(false);
 
         private T Parent;
-        PacketSerivce<T> PacketSerivce;
 
         internal AuthenticationToken AuthenticationToken = new AuthenticationToken();
 
@@ -92,8 +89,6 @@ namespace Sockety.Client
             stream = _stream;
 
             KillSW = false;
-            PacketSerivce = new PacketSerivce<T>();
-            PacketSerivce.SetUp(parent);
 
             TcpReceiveThreadFinishEvent.Reset();
             UdpReceiveThreadFinishEvent.Reset();
@@ -198,7 +193,7 @@ namespace Sockety.Client
                     serverUdpSocket.Receive(CommunicateBuffer);
                     var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
 
-                    Task.Run(() => PacketSerivce.ReceiverSocketyPacketUDP(packet));
+                    Task.Run(() => Parent.UdpReceive(packet.clientInfo, packet.PackData));
                 }
                 catch (Exception ex)
                 {

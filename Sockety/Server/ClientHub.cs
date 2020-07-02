@@ -4,7 +4,6 @@ using Sockety.Attribute;
 using Sockety.Base;
 using Sockety.Filter;
 using Sockety.Model;
-using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,7 +35,6 @@ namespace Sockety.Server
         {
             _stoppingCts.Cancel();
         }
-        PacketSerivce<T> PacketSerivce;
 
         public ClientHub(TcpClient _handler,
             Stream _stream,
@@ -53,9 +51,6 @@ namespace Sockety.Server
             this.Logger = logger;
             this.commnicateStream = _stream;
             this.SocketyFilters = _filters;
-
-            PacketSerivce = new PacketSerivce<T>();
-            PacketSerivce.SetUp(userClass);
 
             MakeHeartBeat();
 
@@ -235,7 +230,7 @@ namespace Sockety.Server
                         var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(state.Buffer);
 
                         //親クラスを呼び出す
-                        PacketSerivce.ReceiverSocketyPacketUDP(packet);
+                        UserClass.UdpReceive(packet.clientInfo, packet.PackData);
                     });
 
                     //  受信を再スタート  
