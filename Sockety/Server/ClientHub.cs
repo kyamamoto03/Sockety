@@ -331,7 +331,6 @@ namespace Sockety.Server
                                 {
                                     //メソッドの戻り値を詰め替える
                                     packet.PackData = InvokeMethod(method, packet);
-                                    Logger.LogInformation(method.Name);
 
                                     //InvokeMethodAsyncの戻り値を送り返す
                                     var d = MessagePackSerializer.Serialize(packet);

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <Authors>Kohji Yamamoto</Authors>
     <PackageProjectUrl>https://github.com/kyamamoto03/Sockety</PackageProjectUrl>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
@@ -11,6 +11,12 @@
     <RepositoryUrl>https://github.com/kyamamoto03/Sockety</RepositoryUrl>
     <Description>.Net Coreネイティブ　ネットワークフレームワーク</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Service\**" />
+    <EmbeddedResource Remove="Service\**" />
+    <None Remove="Service\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.1.115" />
@@ -24,10 +30,6 @@
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Service\" />
   </ItemGroup>
 
 </Project>
