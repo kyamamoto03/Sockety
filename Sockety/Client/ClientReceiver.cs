@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
+using Sockety.Base;
 using Sockety.Model;
 using Sockety.Service;
 using System;
@@ -105,6 +106,7 @@ namespace Sockety.Client
             UdpReceiveThread.Name = "UdpReceiveProcess";
             UdpReceiveThread.Start();
 
+            MakeHeartBeat();
             SurveillanceHeartBeat();
         }
 
@@ -318,6 +320,7 @@ namespace Sockety.Client
 
         private ManualResetEvent TcpReceiveThreadFinishEvent = new ManualResetEvent(false);
         private ManualResetEvent UdpReceiveThreadFinishEvent = new ManualResetEvent(false);
+        private AsyncLock TCPReceiveLock = new AsyncLock();
 
         private void ConnectionLost(string LostMethod = "")
         {
@@ -343,6 +346,40 @@ namespace Sockety.Client
         }
 
         #region HeartBeat
+        private void MakeHeartBeat()
+        {
+            Task.Run(async () =>
+            {
+                while (serverSocket != null)
+                {
+                    await SendHeartBeat();
+                    Thread.Sleep(1000);
+                }
+            });
+        }
+        private async Task SendHeartBeat()
+        {
+            try
+            {
+                using (await TCPReceiveLock.LockAsync())
+                {
+                    var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
+                    var d = MessagePackSerializer.Serialize(packet);
+                    var sizeb = BitConverter.GetBytes(d.Length);
+                    stream.Write(sizeb, 0, sizeof(int));
+                    stream.Write(d, 0, d.Length);
+                }
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine("SendHeartBeat:DisConnect");
+                //await ConnectionLost();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
         public List<HeartBeat> ReceiveHeartBeats = new List<HeartBeat>();
         /// <summary>
         /// HeartBeat受信処理

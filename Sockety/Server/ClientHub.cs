@@ -8,6 +8,7 @@ using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Threading;
@@ -57,6 +58,8 @@ namespace Sockety.Server
             PacketSerivce.SetUp(userClass);
 
             MakeHeartBeat();
+
+            SurveillanceHeartBeat();
         }
 
         public void Dispose()
@@ -97,12 +100,53 @@ namespace Sockety.Server
             catch (IOException ex)
             {
                 Console.WriteLine("SendHeartBeat:DisConnect");
-                await DisConnect();
+                //await DisConnect();
             }
             catch (Exception ex)
             {
                 throw ex;
             }
+        }
+        public List<HeartBeat> ReceiveHeartBeats = new List<HeartBeat>();
+        /// <summary>
+        /// HeartBeat受信処理
+        /// </summary>
+        private void ReceiveHeartBeat()
+        {
+            lock (ReceiveHeartBeats)
+            {
+                ReceiveHeartBeats.Add(new HeartBeat { ReceiveDate = DateTime.Now });
+            }
+        }
+
+        private async Task SurveillanceHeartBeat()
+        {
+            lock (ReceiveHeartBeats)
+            {
+                ReceiveHeartBeats.Clear();
+            }
+            await Task.Run(() =>
+            {
+                while (true)
+                {
+                    lock (ReceiveHeartBeats)
+                    {
+                        var LastHeartBeat = ReceiveHeartBeats.OrderByDescending(x => x.ReceiveDate).FirstOrDefault();
+                        if (LastHeartBeat != null)
+                        {
+                            var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
+                            if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
+                            {
+                                //監視終了
+                                return;
+                            }
+                        }
+                    }
+
+                    Thread.Sleep(5000);
+                }
+            });
+            await DisConnect();
         }
 
         #endregion
@@ -227,76 +271,85 @@ namespace Sockety.Server
                     {
                         if (bytesRec == 0)
                         {
-                            await DisConnect();
-                            //受信スレッド終了
-                            return;
-                        }
-                        int size = BitConverter.ToInt32(sizeb, 0);
-
-                        byte[] buffer = new byte[size];
-                        int DataSize = 0;
-                        do
-                        {
-
-                            bytesRec = commnicateStream.Read(buffer, DataSize, size - DataSize);
-
-                            DataSize += bytesRec;
-
-                        } while (size > DataSize);
-
-                        var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
-
-                        //AuthentificationFilter
-                        bool AuthentificationSuccess = true;
-                        var authentificationFilter = SocketyFilters.Get<IAuthenticationFIlter>();
-                        var method = GetMethod(packet);
-
-                        if (authentificationFilter != null)
-                        {
-                            bool FindIgnore = false;
-
-                            if (method.GetCustomAttribute<SocketyAuthentificationIgnoreAttribute>() != null)
-                            {
-                                //SocketyAuthentificationIgnoreがあるメソッドは認証を行わない
-                                FindIgnore = true;
-                                AuthentificationSuccess = true;
-                            }
-
-                            if (FindIgnore == false)
-                            {
-                                AuthentificationSuccess = authentificationFilter.Authentication(packet.Toekn);
-                            }
-                        }
-
-                        if (AuthentificationSuccess == true)
-                        {
-                            //メソッドの戻り値を詰め替える
-                            packet.PackData = await InvokeMethodAsync(method,packet);
-
-
-                            //InvokeMethodAsyncの戻り値を送り返す
-                            var d = MessagePackSerializer.Serialize(packet);
-                            sizeb = BitConverter.GetBytes(d.Length);
-                            commnicateStream.Write(sizeb, 0, sizeof(int));
-                            commnicateStream.Write(d, 0, d.Length);
+                            //await DisConnect();
+                            ////受信スレッド終了
+                            //return;
                         }
                         else
                         {
-                            Logger.LogInformation($"Client Authentificateion Fail \r\n{packet.clientInfo.ToString()}");
-                            //認証失敗は接続を切断
-                            await DisConnect();
+                            int size = BitConverter.ToInt32(sizeb, 0);
+
+                            byte[] buffer = new byte[size];
+                            int DataSize = 0;
+                            do
+                            {
+
+                                bytesRec = commnicateStream.Read(buffer, DataSize, size - DataSize);
+
+                                DataSize += bytesRec;
+
+                            } while (size > DataSize);
+
+                            var packet = MessagePackSerializer.Deserialize<SocketyPacket>(buffer);
+
+                            //AuthentificationFilter
+                            bool AuthentificationSuccess = true;
+                            var authentificationFilter = SocketyFilters.Get<IAuthenticationFIlter>();
+                            var method = GetMethod(packet);
+
+                            if (authentificationFilter != null)
+                            {
+                                bool FindIgnore = false;
+
+                                if (method.GetCustomAttribute<SocketyAuthentificationIgnoreAttribute>() != null)
+                                {
+                                    //SocketyAuthentificationIgnoreがあるメソッドは認証を行わない
+                                    FindIgnore = true;
+                                    AuthentificationSuccess = true;
+                                }
+
+                                if (FindIgnore == false)
+                                {
+                                    AuthentificationSuccess = authentificationFilter.Authentication(packet.Toekn);
+                                }
+                            }
+
+                            if (AuthentificationSuccess == true)
+                            {
+                                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
+                                {
+                                    ReceiveHeartBeat();
+                                }
+                                else
+                                {
+                                    //メソッドの戻り値を詰め替える
+                                    packet.PackData = await InvokeMethodAsync(method, packet);
+
+                                    //InvokeMethodAsyncの戻り値を送り返す
+                                    var d = MessagePackSerializer.Serialize(packet);
+                                    sizeb = BitConverter.GetBytes(d.Length);
+                                    commnicateStream.Write(sizeb, 0, sizeof(int));
+                                    commnicateStream.Write(d, 0, d.Length);
+                                }
+                            }
+                            else
+                            {
+                                Logger.LogInformation($"Client Authentificateion Fail \r\n{packet.clientInfo.ToString()}");
+                                //認証失敗は接続を切断
+                                await DisConnect();
+                            }
                         }
                     }
                 }
                 catch (IOException ex)
                 {
-                    if (ex.HResult == -2146232800)
-                    {
-                        await DisConnect();
+                    //if (ex.HResult == -2146232800)
+                    //{
+                    //    await DisConnect();
 
-                        //受信スレッド終了
-                        return;
-                    }
+                    //    //受信スレッド終了
+                    //    return;
+                    //}
 
                 }
                 catch (Exception ex)
@@ -346,6 +399,7 @@ namespace Sockety.Server
 
             return ret;
         }
+
 
     }
 }
