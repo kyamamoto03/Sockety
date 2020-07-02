@@ -47,6 +47,9 @@ namespace Sockety.Client
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = parent;
 
+            //新規の接続なのでClientInfoを作成
+            clientInfo = CreateNewClientInfo(UserName);
+
             return ConnectProcess(CONNECT_TYPE.NEW_CONNECT);
         }
 
@@ -89,8 +92,6 @@ namespace Sockety.Client
                 serverSocket = new TcpClient(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
                 var serverSetting = ReceiveServerSetting(serverSocket.GetStream());
 
-                //新規の接続なのでClientInfoを作成
-                clientInfo = CreateNewClientInfo(UserName);
 
 
                 Stream CommunicateStream;
