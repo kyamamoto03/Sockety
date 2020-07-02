@@ -81,21 +81,25 @@ namespace Sockety.Server
         #region HeartBeat
         private void MakeHeartBeat()
         {
-            Task.Run(async () =>
-            {
-                while(!_stoppingCts.IsCancellationRequested)
-                {
-                    await SendHeartBeat();
-                    Thread.Sleep(1000);
-                }
-                Logger.LogInformation("MakeHeartBeat Done");
-            });
+            var thread = new Thread(new ThreadStart(SendHeartBeatProcess));
+            thread.Name = "SendHeartBeatProcess";
+            thread.Start();
+
         }
-        private async Task SendHeartBeat()
+        private void SendHeartBeatProcess()
+        {
+            while (!_stoppingCts.IsCancellationRequested)
+            {
+                SendHeartBeat();
+                Thread.Sleep(1000);
+            }
+            Logger.LogInformation("MakeHeartBeat Done");
+        }
+        private void SendHeartBeat()
         {
             try
             {
-                using (await TCPReceiveLock.LockAsync())
+                lock (lockObject)
                 {
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
                     var d = MessagePackSerializer.Serialize(packet);
