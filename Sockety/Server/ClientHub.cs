@@ -148,6 +148,7 @@ namespace Sockety.Server
                             var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
                             if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
                             {
+                                Logger.LogInformation("SurveillanceHeartBeat Done.");
                                 //監視終了
                                 return;
                             }
@@ -366,7 +367,7 @@ namespace Sockety.Server
         /// <returns></returns>
         private void DisConnect()
         {
-            Logger.LogInformation($"ReceiveProcess DisConnect:{ClientInfo.ClientID}");
+            Logger.LogInformation($"DisConnect:{ClientInfo.ClientID}");
 
             //クライアント一覧から削除
             SocketClient<T>.GetInstance().ClientHubs.Remove(this);

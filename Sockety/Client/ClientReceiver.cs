@@ -77,20 +77,10 @@ namespace Sockety.Client
         #region IDisposable
         public void Dispose()
         {
-            AbortReceiveProcess();
+            Close();
         }
         #endregion
 
-
-        internal void AbortReceiveProcess()
-        {
-            if (TcpReceiveThread != null)
-            {
-                TcpReceiveThread.Abort();
-                TcpReceiveThread = null;
-            }
-
-        }
 
 
         internal void Run(
@@ -331,8 +321,16 @@ namespace Sockety.Client
 
         private void ConnectionLost(string LostMethod = "")
         {
+            Close();
+
+            //再切断呼び出し
+            Task.Run(() => ConnectionReset?.Invoke());
+        }
+
+        internal void Close()
+        {
             ThreadCancellationToken.Cancel();
-            System.Diagnostics.Debug.WriteLine($"{LostMethod}:ConnectionLost");
+            System.Diagnostics.Debug.WriteLine($"ClientReceiver:Close");
 
             Connected = false;
             RecieveSyncEvent.Set();
@@ -348,9 +346,9 @@ namespace Sockety.Client
             UdpReceiveThreadFinishEvent.WaitOne();
             System.Diagnostics.Debug.WriteLine("Thread終了");
 
-            //再切断呼び出し
-            Task.Run(() => ConnectionReset?.Invoke());
+
         }
+
 
         #region HeartBeat
         private void MakeHeartBeat()
@@ -407,7 +405,7 @@ namespace Sockety.Client
             }
             Task.Run(() =>
             {
-                while (true)
+                while (!ThreadCancellationToken.IsCancellationRequested)
                 {
                     lock (ReceiveHeartBeats)
                     {
@@ -417,7 +415,10 @@ namespace Sockety.Client
                             var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
                             if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
                             {
-                                ConnectionLost("SurveillanceHeartBeat");
+                                if (ThreadCancellationToken.IsCancellationRequested)
+                                {
+                                    ConnectionLost("SurveillanceHeartBeat");
+                                }
                                 //監視終了
                                 return;
                             }

@@ -235,7 +235,7 @@ namespace Sockety.Client
         {
             if (serverSocket != null)
             {
-                clientReceiver.AbortReceiveProcess();
+                clientReceiver.Close();
                 serverSocket.Close();
                 serverSocket = null;
             }
