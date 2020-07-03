@@ -128,7 +128,6 @@ namespace Sockety.Server
             {
                 if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
                 {
-                    Logger.LogInformation("FinishHeartBeat");
                     //正常な切断処理を行う
                     NormalDisConnect();
                 }
@@ -333,8 +332,7 @@ namespace Sockety.Server
 
                             if (AuthentificationSuccess == true)
                             {
-                                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat ||
-                                    packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
+                                if (packet.SocketyPacketType != SocketyPacket.SOCKETY_PAKCET_TYPE.Data)
                                 {
                                     ReceiveHeartBeat(packet);
                                 }
@@ -404,8 +402,7 @@ namespace Sockety.Server
         private MethodInfo GetMethod(SocketyPacket packet)
         {
             Type t = UserClass.GetType();
-            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat ||
-                packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
+            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
             {
                 return null;
             }
