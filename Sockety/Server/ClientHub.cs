@@ -270,7 +270,6 @@ namespace Sockety.Server
             }
         }
 
-        private AsyncLock TCPReceiveLock = new AsyncLock();
         /// <summary>
         /// 受信を一括して行う
         /// </summary>
