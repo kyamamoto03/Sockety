@@ -369,6 +369,7 @@ namespace Sockety.Server
                 }
                 Thread.Sleep(10);
             }
+            TcpReceiveThreadFinishEvent.Set();
         }
 
         /// <summary>
@@ -392,13 +393,13 @@ namespace Sockety.Server
             serverSocket = null;
 
             ThreadCancel();
+            commnicateStream.Close();
+            //Udpの切断処理
+            UdpPort.PunchingSocket.Close();
             TcpReceiveThreadFinishEvent.WaitOne();
             UdpReceiveThreadFinishEvent.WaitOne();
             //Udpのポートが使えるようにする
             UdpPort.IsConnect = false;
-            //Udpの切断処理
-            UdpPort.PunchingSocket.Close();
-
         }
 
         private MethodInfo GetMethod(SocketyPacket packet)
