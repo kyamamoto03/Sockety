@@ -441,7 +441,7 @@ namespace Sockety.Client
                             var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
                             if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
                             {
-                                if (ThreadCancellationToken.IsCancellationRequested)
+                                if (!ThreadCancellationToken.IsCancellationRequested)
                                 {
                                     ConnectionLost("SurveillanceHeartBeat");
                                 }
