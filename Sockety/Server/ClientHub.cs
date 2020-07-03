@@ -122,11 +122,20 @@ namespace Sockety.Server
         /// <summary>
         /// HeartBeat受信処理
         /// </summary>
-        private void ReceiveHeartBeat()
+        private void ReceiveHeartBeat(SocketyPacket packet)
         {
             lock (ReceiveHeartBeats)
             {
-                ReceiveHeartBeats.Add(new HeartBeat { ReceiveDate = DateTime.Now });
+                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
+                {
+                    Logger.LogInformation("FinishHeartBeat");
+                    //正常な切断処理を行う
+                    NormalDisConnect();
+                }
+                else
+                {
+                    ReceiveHeartBeats.Add(new HeartBeat { ReceiveDate = DateTime.Now });
+                }
             }
         }
 
@@ -324,9 +333,10 @@ namespace Sockety.Server
 
                             if (AuthentificationSuccess == true)
                             {
-                                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
+                                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat ||
+                                    packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
                                 {
-                                    ReceiveHeartBeat();
+                                    ReceiveHeartBeat(packet);
                                 }
                                 else
                                 {
@@ -368,12 +378,18 @@ namespace Sockety.Server
         private void DisConnect()
         {
             Logger.LogInformation($"DisConnect:{ClientInfo.ClientID}");
+            NormalDisConnect();
+            //通信切断
+            Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
+
+        }
+        private void NormalDisConnect()
+        {
+            Logger.LogInformation($"NormalDisConnect:{ClientInfo.ClientID}");
 
             //クライアント一覧から削除
             SocketClient<T>.GetInstance().ClientHubs.Remove(this);
             serverSocket = null;
-            //通信切断
-            Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
 
             ThreadCancel();
             TcpReceiveThreadFinishEvent.WaitOne();
@@ -382,12 +398,14 @@ namespace Sockety.Server
             UdpPort.IsConnect = false;
             //Udpの切断処理
             UdpPort.PunchingSocket.Close();
+
         }
 
         private MethodInfo GetMethod(SocketyPacket packet)
         {
             Type t = UserClass.GetType();
-            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
+            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat ||
+                packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
             {
                 return null;
             }

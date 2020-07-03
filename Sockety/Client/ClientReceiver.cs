@@ -329,6 +329,8 @@ namespace Sockety.Client
 
         internal void Close()
         {
+            SendFinishHeartBeat().Wait();
+
             ThreadCancellationToken.Cancel();
             System.Diagnostics.Debug.WriteLine($"ClientReceiver:Close");
 
@@ -369,6 +371,30 @@ namespace Sockety.Client
                 using (await TCPReceiveLock.LockAsync())
                 {
                     var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat };
+                    var d = MessagePackSerializer.Serialize(packet);
+                    var sizeb = BitConverter.GetBytes(d.Length);
+                    stream.Write(sizeb, 0, sizeof(int));
+                    stream.Write(d, 0, d.Length);
+                }
+            }
+            catch (IOException ex)
+            {
+                Logger.LogInformation("SendHeartBeat:DisConnect");
+                //await ConnectionLost();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private async Task SendFinishHeartBeat()
+        {
+            try
+            {
+                using (await TCPReceiveLock.LockAsync())
+                {
+                    var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat };
                     var d = MessagePackSerializer.Serialize(packet);
                     var sizeb = BitConverter.GetBytes(d.Length);
                     stream.Write(sizeb, 0, sizeof(int));

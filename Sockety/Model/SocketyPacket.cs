@@ -22,7 +22,8 @@ namespace Sockety.Model
         public enum SOCKETY_PAKCET_TYPE
         {
             Data,
-            HaertBeat
+            HaertBeat,
+            FinishHeartBeat
         }
     }
 }
