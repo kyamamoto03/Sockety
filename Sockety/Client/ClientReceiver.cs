@@ -429,31 +429,37 @@ namespace Sockety.Client
             {
                 ReceiveHeartBeats.Clear();
             }
-            Task.Run(() =>
+            var thread = new Thread(new ThreadStart(SurveillanceHeartBeatProcess));
+            thread.Name = "SurveillanceHeartBeatProcess";
+            thread.Start();
+
+        }
+
+        private void SurveillanceHeartBeatProcess()
+        {
+            while (!ThreadCancellationToken.IsCancellationRequested)
             {
-                while (!ThreadCancellationToken.IsCancellationRequested)
+                lock (ReceiveHeartBeats)
                 {
-                    lock (ReceiveHeartBeats)
+                    var LastHeartBeat = ReceiveHeartBeats.OrderByDescending(x => x.ReceiveDate).FirstOrDefault();
+                    if (LastHeartBeat != null)
                     {
-                        var LastHeartBeat = ReceiveHeartBeats.OrderByDescending(x => x.ReceiveDate).FirstOrDefault();
-                        if (LastHeartBeat != null)
+                        var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
+                        if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
                         {
-                            var diff = DateTime.Now - LastHeartBeat.ReceiveDate;
-                            if (diff.TotalMilliseconds > SocketySetting.HEART_BEAT_LOST_TIME)
+                            if (!ThreadCancellationToken.IsCancellationRequested)
                             {
-                                if (!ThreadCancellationToken.IsCancellationRequested)
-                                {
-                                    ConnectionLost("SurveillanceHeartBeat");
-                                }
-                                //監視終了
-                                return;
+                                ConnectionLost("SurveillanceHeartBeat");
                             }
+                            //監視終了
+                            return;
                         }
                     }
-
-                    Thread.Sleep(5000);
                 }
-            });
+
+                Thread.Sleep(5000);
+            }
+
         }
 
         #endregion
