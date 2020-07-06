@@ -402,7 +402,8 @@ namespace Sockety.Server
         private MethodInfo GetMethod(SocketyPacket packet)
         {
             Type t = UserClass.GetType();
-            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
+            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat ||
+                packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
             {
                 return null;
             }
