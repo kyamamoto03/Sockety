@@ -38,7 +38,56 @@ namespace Sockety.Client
         /// <summary>
         /// クライアントが読んでいるサーバのメソッド名
         /// </summary>
-        private string ServerCallMethodName = "";
+        private ServerCall serverCall = new ServerCall();
+        class ServerCall
+        {
+            public string ServerCallMethodName { get; private set; } = String.Empty;
+            public string ServerCallMethodID { get; private set; } = String.Empty;
+
+            public ServerCall()
+            {
+
+            }
+            public ServerCall(string ServerCallMethodName, string ServerCallMethodID)
+            {
+                Set(ServerCallMethodName, ServerCallMethodID);
+            }
+            public enum RESPONOSE_TYPE
+            {
+                MATCH,
+                WRONG_METHOD_ID,
+                OTHER_METHOD
+            }
+            public RESPONOSE_TYPE IsType(object obj)
+            {
+                ServerCall c = obj as ServerCall;
+                if (c.ServerCallMethodName == ServerCallMethodName && c.ServerCallMethodID == ServerCallMethodID && IsCalled == true)
+                {
+                    return RESPONOSE_TYPE.MATCH;
+                }
+                else if (c.ServerCallMethodName == ServerCallMethodName && c.ServerCallMethodID != ServerCallMethodID && IsCalled == true)
+                {
+                    return RESPONOSE_TYPE.WRONG_METHOD_ID;
+                }
+                return RESPONOSE_TYPE.OTHER_METHOD;;
+            }
+
+            public void Set(string ServerCallMethodName, string ServerCallMethodID)
+            {
+                this.ServerCallMethodName = ServerCallMethodName;
+                this.ServerCallMethodID = ServerCallMethodID;
+                _IsCalled = true;
+            }
+
+            public void Clear()
+            {
+                ServerCallMethodName = String.Empty;
+                ServerCallMethodID = String.Empty;
+                _IsCalled = false;
+            }
+            private bool _IsCalled = false;
+            public bool IsCalled => _IsCalled;
+        }
         /// <summary>
         /// サーバからのレスポンスデータ
         /// </summary>
@@ -152,11 +201,12 @@ namespace Sockety.Client
                     return null;
                 }
 
-                lock (ServerCallMethodName)
+                lock (serverCall)
                 {
-                    ServerCallMethodName = serverMethodName;
+                    serverCall.Set(ServerCallMethodName: serverMethodName,
+                        ServerCallMethodID: Guid.NewGuid().ToString());
                 }
-                SocketyPacket packet = new SocketyPacket { MethodName = serverMethodName, clientInfo = ClientInfo, PackData = data, Toekn = AuthenticationToken };
+                SocketyPacket packet = new SocketyPacket { MethodName = serverCall.ServerCallMethodName, MethodID = serverCall.ServerCallMethodID, clientInfo = ClientInfo, PackData = data, Toekn = AuthenticationToken };
                 RecieveSyncEvent.Reset();
                 ServerResponse = null;
 
@@ -171,7 +221,10 @@ namespace Sockety.Client
                 catch { }
                 finally
                 {
-                    RecieveSyncEvent.WaitOne();
+                    if (RecieveSyncEvent.WaitOne(SocketySetting.SERVER_RESPONSE_TIME_OUT) == false)
+                    {
+                        throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.SERVER_RESPONSE_ERROR);
+                    }
                 }
 
             }
@@ -226,7 +279,7 @@ namespace Sockety.Client
                     //データサイズ受信
                     int bytesRec = stream.Read(sizeb, 0, sizeb.Length);
                     var packetSize = PacketSize.FromBytes(sizeb);
-                    
+
                     if (packetSize != null && packetSize.Size < SocketySetting.MAX_BUFFER)
                     {
                         //データ領域確保
@@ -273,23 +326,32 @@ namespace Sockety.Client
                             {
                                 lock (RecieveSyncEvent)
                                 {
-                                    if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
+                                    lock (serverCall)
                                     {
-                                        ReceiveHeartBeat();
-                                    }
-                                    else
-                                    {
-
-                                        if (string.IsNullOrEmpty(ServerCallMethodName) != true && ServerCallMethodName == packet.MethodName)
+                                        if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.HaertBeat)
                                         {
-                                            ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
-                                            ServerResponse = packet.PackData;
-                                            RecieveSyncEvent.Set();
+                                            ReceiveHeartBeat();
                                         }
                                         else
                                         {
-                                            ///非同期なので、クライアントメソッドを呼ぶ
-                                            InvokeMethod(packet);
+                                            var s = new ServerCall(packet.MethodName, packet.MethodID);
+                                            if (serverCall.IsType(s) == ServerCall.RESPONOSE_TYPE.MATCH)
+                                            {
+                                                ///サーバのレスポンスを待つタイプの場合は待ちイベントをセットする
+                                                ServerResponse = packet.PackData;
+                                                RecieveSyncEvent.Set();
+                                                serverCall.Clear();
+                                            }
+                                            else if (serverCall.IsType(s) == ServerCall.RESPONOSE_TYPE.WRONG_METHOD_ID)
+                                            {
+                                                //欲しいレスポンスではないので捨てる
+                                                Logger.LogInformation("欲しいレスポンスではないので捨てる");
+                                            }
+                                            else
+                                            {
+                                                ///非同期なので、クライアントメソッドを呼ぶ
+                                                InvokeMethod(packet);
+                                            }
                                         }
                                     }
                                 }
@@ -457,7 +519,7 @@ namespace Sockety.Client
                     }
                 }
 
-                Thread.Sleep(5000);
+                Thread.Sleep(1000);
             }
 
         }

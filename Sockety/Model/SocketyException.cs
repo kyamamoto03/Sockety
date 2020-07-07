@@ -14,7 +14,11 @@ namespace Sockety.Model
             /// クライアント不明
             /// </summary>
             NO_CLIENT,
-            ERROR
+            ERROR,
+            /// <summary>
+            /// サーバのレスポンスが一定期間(SocketySetting.SERVER_RESPONSE_TIME_OUT)なかった時のエラー
+            /// </summary>
+            SERVER_RESPONSE_ERROR
         }
 
         public SOCKETY_EXCEPTION_ERROR SocketyErrorCode { get; private set; }

@@ -15,7 +15,13 @@
         /// UDPのバケット分割サイズ
         /// </summary>
         public static int UDP_SPLIT_SIZE = 30000;
-
-        public static int HEART_BEAT_LOST_TIME = 10000;
+        /// <summary>
+        /// HeartBeatの切断感知時間
+        /// </summary>
+        public static int HEART_BEAT_LOST_TIME = 2000;
+        /// <summary>
+        /// サーバの返信待ち時間
+        /// </summary>
+        public static int SERVER_RESPONSE_TIME_OUT = 5000;
     }
 }

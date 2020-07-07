@@ -75,20 +75,25 @@ namespace SocketyClient
                 return;
             }
             await client.Send("Join", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
-            var echoData = await client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
-            Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
+
 
             while (true)
             {
                 try
                 {
-                    echoData = await client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
+                    var echoData = await client.Send("Echo", Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
                     if (echoData != null)
                     {
                         Console.WriteLine($"{Encoding.ASCII.GetString(echoData)}");
                     }
                 }
-                catch(SocketyException) { }
+                catch(SocketyException ex) {
+                    Console.WriteLine($"SocketException:{ex.ToString()}");
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Exception:{ex.ToString()}");
+                }
                 client.UdpSend(Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
 
                 //var t = Encoding.ASCII.GetBytes("UDP Test");
