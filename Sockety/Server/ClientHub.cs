@@ -113,7 +113,8 @@ namespace Sockety.Server
             }
             catch (Exception ex)
             {
-                throw ex;
+                //throw ex;
+                Logger.LogInformation($"{ex}");
             }
         }
         public List<HeartBeat> ReceiveHeartBeats = new List<HeartBeat>();

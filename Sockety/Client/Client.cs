@@ -28,9 +28,6 @@ namespace Sockety.Client
         private int PortNumber;
         private string UserName;
 
-        private static string AES_IV = @"pf69DLcGrWFyZcMK";
-        private static string AES_Key = @"9Fix4L4bdGPKeKWY";
-
         public Client(ILogger logger)
         {
             Logger = logger;
@@ -106,7 +103,21 @@ namespace Sockety.Client
                     SslStream sslStream = new SslStream(serverSocket.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
                     sslStream.AuthenticateAsClient(ServerHost);
                     CommunicateStream = sslStream as Stream;
-                    cryptService = new SocketyCryptService(AES_IV, AES_Key);
+                    //鍵受信
+                    byte[] packetDataSized = new byte[sizeof(int)];
+                    CommunicateStream.Read(packetDataSized, 0, packetDataSized.Length);
+                    int packetDataSize = BitConverter.ToInt32(packetDataSized,0);
+                    byte[] packetDatad = new byte[packetDataSize];
+                    CommunicateStream.Read(packetDatad, 0, packetDatad.Length);
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacket>(packetDatad);
+                    string subKey = Encoding.UTF8.GetString(packet.PackData);
+                    //初期ベクターと鍵が一緒に来るので分離する
+                    string iv = subKey.Substring(0, 16);
+                    string key = subKey.Substring(16, 16);
+
+                    //暗号初期化
+                    cryptService = new SocketyCryptService(iv, key);
+
                 }
                 else
                 {

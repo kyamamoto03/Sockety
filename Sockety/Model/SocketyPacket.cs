@@ -25,7 +25,8 @@ namespace Sockety.Model
         {
             Data,
             HaertBeat,
-            FinishHeartBeat
+            FinishHeartBeat,
+            KeyExchange
         }
     }
 }

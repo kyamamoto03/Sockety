@@ -31,7 +31,7 @@ namespace Sockety.Server
         #endregion
         private ILogger Logger;
 
-        private static string AES_IV = @"pf69DLcGrWFyZcMK";
+        private static string AES_IV = @"pf69DLcGrxFyZcMK";
         private static string AES_Key = @"9Fix4L4bdGPKeKWY";
 
         private TcpListener MainListener;
@@ -91,6 +91,15 @@ namespace Sockety.Server
                             SslStream sslStream = new SslStream(handler.GetStream());
                             sslStream.AuthenticateAsServer(serverSetting.Certificate, false, System.Security.Authentication.SslProtocols.Tls12, true);
                             CommunicateStream = sslStream as Stream;
+
+                            string SumKey = AES_IV + AES_Key;
+                            var packet = new SocketyPacket() { SocketyPacketType = SocketyPacket.SOCKETY_PAKCET_TYPE.KeyExchange, PackData = Encoding.UTF8.GetBytes(AES_IV + AES_Key) };
+                            var packetData = MessagePackSerializer.Serialize(packet);
+                            //鍵を送る
+                            var packetDataSized = BitConverter.GetBytes(packetData.Length);
+                            CommunicateStream.Write(packetDataSized, 0, packetDataSized.Length);
+                            CommunicateStream.Write(packetData, 0, packetData.Length);
+                            
                             cryptService = new SocketyCryptService(AES_IV, AES_Key);
                         }
                         else
