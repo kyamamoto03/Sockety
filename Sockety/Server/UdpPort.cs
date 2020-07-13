@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
@@ -27,12 +28,39 @@ namespace Sockety.Server
         }
         public static void Init(int StartPort,int EndPort)
         {
+            if (StartPort > EndPort)
+            {
+                throw new Exception("StartPortとEndPortが逆転しています");
+            }
+            if (ValidPort(StartPort) == false)
+            {
+                throw new Exception("Invalid StartPort");
+            }
+            if (ValidPort(EndPort) == false)
+            {
+                throw new Exception("Invalid EndPort");
+            }
+
             _UdpPorts = new List<UdpPort<T>>();
             for (int i = StartPort; i <= EndPort; i++)
             {
                 _UdpPorts.Add(new UdpPort<T>() { UdpPortNumber = i });
             }
 
+        }
+
+        private static  bool ValidPort(int port)
+        {
+            if (port < 1024)
+            {
+                return false;
+            }
+            if (port > UInt16.MaxValue)
+            {
+                return false;
+            }
+
+            return true;
         }
     }
 

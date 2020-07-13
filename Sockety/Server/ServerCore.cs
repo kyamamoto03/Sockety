@@ -34,6 +34,9 @@ namespace Sockety.Server
         private T Parent;
         CancellationTokenSource stoppingCts;
 
+        public readonly int DefaultStartUDP = 11000;
+        public readonly int DefaultEndUDP = 11120;
+
         public SocketyFilters SocketyFilters { get; private set; } = new SocketyFilters();
         /// <summary>
         /// クライアント切断時に発火
@@ -43,6 +46,7 @@ namespace Sockety.Server
         public ServerCore(ILogger logger)
         {
             Logger = logger;
+            InitUDP(DefaultStartUDP, DefaultEndUDP);
         }
 
         private ServerSetting serverSetting;

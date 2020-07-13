@@ -11,7 +11,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Schema;
 
 namespace Sockety.Client
 {
@@ -115,7 +114,7 @@ namespace Sockety.Client
                 SendClientInfo(CommunicateStream, clientInfo);
 
                 //Udp接続
-                var UdpInfo = ConnectUdp(CommunicateStream,ServerHost, ReceiveUdpPort(CommunicateStream));
+                var UdpInfo = ConnectUdp(CommunicateStream, ServerHost, ReceiveUdpPort(CommunicateStream));
 
                 //受信スレッド作成
                 clientReceiver.Run(handler: serverSocket,
@@ -164,7 +163,7 @@ namespace Sockety.Client
             byte[] sizeb = new byte[sizeof(int)];
             networkStream.Read(sizeb, 0, sizeof(int));
 
-            byte[] data = new byte[BitConverter.ToInt32(sizeb,0)];
+            byte[] data = new byte[BitConverter.ToInt32(sizeb, 0)];
             networkStream.Read(data, 0, data.Length);
             return MessagePackSerializer.Deserialize<ConnectionSetting>(data);
         }
@@ -206,7 +205,8 @@ namespace Sockety.Client
             var sending_end_point = new IPEndPoint(host, PortNumber);
 
             bool OKFlag = false;
-            Task.Run(() => {
+            Task.Run(() =>
+            {
                 while (true)
                 {
                     var packet = new SocketyPacketUDP()
@@ -287,6 +287,10 @@ namespace Sockety.Client
             {
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
+            if (clientReceiver.Connected == false)
+            {
+                return null;
+            }
             return await clientReceiver.Send(serverMethodName, data);
         }
 
@@ -300,10 +304,13 @@ namespace Sockety.Client
             {
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
-
+            if (clientReceiver.Connected == false)
+            {
+                return ;
+            }
             var packetID = Guid.NewGuid();
 
-            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = 1,PackData = data ,PacketType = SocketyPacketUDP.PACKET_TYPE.DATA};
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = 1, PackData = data, PacketType = SocketyPacketUDP.PACKET_TYPE.DATA };
             clientReceiver.UdpSend(packet);
         }
 

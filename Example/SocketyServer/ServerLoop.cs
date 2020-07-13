@@ -29,7 +29,17 @@ namespace SocketyServer
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _executingTask = Task.Run(async () => await MainLoop());
+            _executingTask = Task.Run(() =>
+            {
+                try
+                {
+                    MainLoop();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"{ex}");
+                }
+            });
 
             return Task.CompletedTask;
         }
@@ -68,7 +78,7 @@ namespace SocketyServer
         {
             Logger = logger;
         }
-        private async Task MainLoop()
+        private void MainLoop()
         {
             serverCore = new ServerCore<ServerLoop>(Logger);
             //グループを作成
@@ -92,7 +102,7 @@ namespace SocketyServer
             serverCore.SocketyFilters.Add(authtificationFilter);
 
             serverCore.InitUDP(11000, 11120);
-            serverCore.Start(localEndPoint:localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
+            serverCore.Start(localEndPoint: localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
 
             int cnt = 0;
             while (!_stoppingCts.IsCancellationRequested)

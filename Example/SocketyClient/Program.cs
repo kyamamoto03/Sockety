@@ -62,13 +62,23 @@ namespace SocketyClient
 
             try
             {
-                client.Connect("localhost", 11000, "ConsoleApp", this);
+                if (client.Connect("localhost", 11000, "ConsoleApp", this) == true)
+                {
 
-                var tokenb = await client.Send("Authentification", null);
+                    var tokenb = await client.Send("Authentification", null);
 
-                client.SetAuthenticationToken(Encoding.ASCII.GetString(tokenb));
+                    client.SetAuthenticationToken(Encoding.ASCII.GetString(tokenb));
+                }
+                else
+                {
+                    Console.WriteLine("Can't Connect");
+                    Console.ReadLine();
+                    return;
 
-            }catch(Exception e)
+                }
+
+            }
+            catch(Exception e)
             {
                 Console.WriteLine(e.ToString());
                 Console.ReadLine();
