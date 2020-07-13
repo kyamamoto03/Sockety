@@ -56,6 +56,7 @@ namespace Sockety.Server
             {
                 serverSetting = new ServerSetting { UseSSL = false };
             }
+
             // メイン接続のTCP/IPを作成
             MainListener = new TcpListener(localEndPoint.Address, localEndPoint.Port);
             MainListener.Start();
@@ -136,6 +137,12 @@ namespace Sockety.Server
             });
         }
 
+        public void InitUDP(int StartPort,int EndPort)
+        {
+            //UDPポート情報の初期化
+            UserCommunicateService<T>.Init(StartPort: StartPort, EndPort: EndPort);
+
+        }
         /// <summary>
         /// ServerSettingを平文で送信
         /// </summary>

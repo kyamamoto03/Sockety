@@ -91,7 +91,7 @@ namespace SocketyServer
             var authtificationFilter = new LocalAuthentificationFilter();
             serverCore.SocketyFilters.Add(authtificationFilter);
 
-
+            serverCore.InitUDP(11000, 11120);
             serverCore.Start(localEndPoint:localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
 
             int cnt = 0;
