@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Sockety.Attribute;
 using Sockety.Filter;
 using Sockety.Model;
+using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,6 +21,7 @@ namespace Sockety.Server
     {
         private TcpClient serverSocket = null;
         private Stream commnicateStream;
+        private SocketyCryptService CryptService;
 
         public ClientInfo ClientInfo { get; private set; }
         private T UserClass;
@@ -46,12 +48,13 @@ namespace Sockety.Server
             _stoppingCts.Cancel();
         }
 
-        public ClientHub(TcpClient _handler,
+        internal ClientHub(TcpClient _handler,
             Stream _stream,
             ClientInfo _clientInfo,
             T userClass,
             ILogger logger,
-            SocketyFilters _filters)
+            SocketyFilters _filters,
+            SocketyCryptService CryptService)
         {
             this.UserClass = userClass;
             this.serverSocket = _handler;
@@ -59,6 +62,7 @@ namespace Sockety.Server
             this.Logger = logger;
             this.commnicateStream = _stream;
             this.SocketyFilters = _filters;
+            this.CryptService = CryptService;
 
         }
 
@@ -199,8 +203,13 @@ namespace Sockety.Server
             {
                 lock (UdpPort.PunchingSocket)
                 {
-                    var bytes = MessagePackSerializer.Serialize(packet);
-                    UdpPort.PunchingSocket.SendTo(bytes, SocketFlags.None, UdpPort.PunchingPoint);
+                    var preData = MessagePackSerializer.Serialize(packet);
+                    if (CryptService != null)
+                    {
+                        preData = CryptService.Encrypt(preData);
+                    }
+
+                    UdpPort.PunchingSocket.SendTo(preData, SocketFlags.None, UdpPort.PunchingPoint);
                 }
             }
             catch (Exception ex)
@@ -240,7 +249,7 @@ namespace Sockety.Server
             commnicateStream.Write(portData, 0, portData.Length);
 
             //Udp HolePunching
-            var ret = UdpConnect(commnicateStream, CanUDPConnectPort.UdpPortNumber);
+            var ret = UdpConnect(commnicateStream, CanUDPConnectPort.UdpPortNumber, CryptService);
             CanUDPConnectPort.PunchingSocket = ret.s;
             CanUDPConnectPort.PunchingPoint = ret.p;
             CanUDPConnectPort.IsConnect = true;
@@ -262,7 +271,7 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        private (Socket s, IPEndPoint p) UdpConnect(Stream stream, int PortNumber)
+        private (Socket s, IPEndPoint p) UdpConnect(Stream stream, int PortNumber,SocketyCryptService cryptService)
         {
             var WaitingServerAddress = IPAddress.Any;
             IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
@@ -278,6 +287,10 @@ namespace Sockety.Server
                 //Udp Hole Puchingをするために何かしらのデータを受信する(ここではクライアントが指定したサーバのアドレス)
                 //TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
                 var data = udpClient.Receive(ref groupEP);
+                if (cryptService != null)
+                {
+                    data = cryptService.Decrypt(data);
+                }
                 controlPacket = MessagePackSerializer.Deserialize<SocketyPacketUDP>(data);
             }
             TargetAddress = Encoding.UTF8.GetString(controlPacket.PackData);
@@ -337,7 +350,13 @@ namespace Sockety.Server
                 int bytesRead = client.EndReceive(ar);
                 if (bytesRead > 0)
                 {
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(state.Buffer);
+                    byte[] ReceiveData = new byte[bytesRead];
+                    Array.Copy(state.Buffer, ReceiveData, bytesRead);
+                    if (CryptService != null)
+                    {
+                        ReceiveData = CryptService.Decrypt(ReceiveData);
+                    }
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(ReceiveData);
                     if (packet.PacketType == SocketyPacketUDP.PACKET_TYPE.DATA)
                     {
                         //親クラスを呼び出す

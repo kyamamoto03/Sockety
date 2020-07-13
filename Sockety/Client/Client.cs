@@ -1,6 +1,7 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using Sockety.Model;
+using Sockety.Service;
 using System;
 using System.IO;
 using System.Linq;
@@ -26,6 +27,9 @@ namespace Sockety.Client
         private ILogger Logger;
         private int PortNumber;
         private string UserName;
+
+        private static string AES_IV = @"pf69DLcGrWFyZcMK";
+        private static string AES_Key = @"9Fix4L4bdGPKeKWY";
 
         public Client(ILogger logger)
         {
@@ -96,11 +100,13 @@ namespace Sockety.Client
 
 
                 Stream CommunicateStream;
+                SocketyCryptService cryptService = null;
                 if (serverSetting.UseSSL == true)
                 {
                     SslStream sslStream = new SslStream(serverSocket.GetStream(), false, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
                     sslStream.AuthenticateAsClient(ServerHost);
                     CommunicateStream = sslStream as Stream;
+                    cryptService = new SocketyCryptService(AES_IV, AES_Key);
                 }
                 else
                 {
@@ -114,16 +120,17 @@ namespace Sockety.Client
                 SendClientInfo(CommunicateStream, clientInfo);
 
                 //Udp接続
-                var UdpInfo = ConnectUdp(CommunicateStream, ServerHost, ReceiveUdpPort(CommunicateStream));
+                var UdpInfo = ConnectUdp(CommunicateStream, ServerHost, ReceiveUdpPort(CommunicateStream),cryptService: cryptService);
 
                 //受信スレッド作成
-                clientReceiver.Run(handler: serverSocket,
+                clientReceiver.Run(serverSocket: serverSocket,
                     _stream: CommunicateStream,
                     UdpSocket: UdpInfo.socket,
                     UdpEndPort: UdpInfo.point,
                     clientInfo: clientInfo,
                     _logger: Logger,
-                    Parent);
+                    Parent: Parent,
+                    cryptService: cryptService);
 
             }
             catch (ArgumentNullException ane)
@@ -187,7 +194,7 @@ namespace Sockety.Client
         /// <param name="ServerHost"></param>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        private (Socket socket, IPEndPoint point) ConnectUdp(Stream stream, string ServerHost, int PortNumber)
+        private (Socket socket, IPEndPoint point) ConnectUdp(Stream stream, string ServerHost, int PortNumber,SocketyCryptService cryptService)
         {
             var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -215,6 +222,10 @@ namespace Sockety.Client
                         PackData = Encoding.UTF8.GetBytes(host.ToString())
                     };
                     var packetdata = MessagePackSerializer.Serialize(packet);
+                    if (cryptService != null)
+                    {
+                        packetdata = cryptService.Encrypt(packetdata);
+                    }
                     sending_socket.SendTo(packetdata, sending_end_point);
                     if (OKFlag == true)
                     {

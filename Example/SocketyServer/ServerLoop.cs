@@ -94,7 +94,7 @@ namespace SocketyServer
             //すべてのIPで接続を受け付ける
             IPAddress ipAddress = IPAddress.Any;
             IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PortNumber);
-            var serverSetting = new ServerSetting { UseSSL = false };
+            var serverSetting = new ServerSetting { UseSSL = true };
             serverSetting.LoadCertificateFile("test-cert.pfx", "testcert");
 
             //Filter

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Sockety.Base;
 using Sockety.Model;
+using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -130,25 +131,28 @@ namespace Sockety.Client
         }
         #endregion
 
+        private SocketyCryptService CryptService;
 
 
         internal void Run(
-            TcpClient handler,
+            TcpClient serverSocket,
             Stream _stream,
             Socket UdpSocket,
             IPEndPoint UdpEndPort,
             ClientInfo clientInfo,
             ILogger _logger,
-            T parent)
+            T Parent,
+            SocketyCryptService cryptService)
         {
-            Parent = parent;
-            serverSocket = handler;
+            this.Parent = Parent;
+            this.serverSocket = serverSocket;
             serverUdpSocket = UdpSocket;
             serverUdpPort = UdpEndPort;
             ClientInfo = clientInfo;
             Connected = true;
             stream = _stream;
             this.Logger = _logger;
+            this.CryptService = cryptService;
 
             ThreadCancellationToken = new CancellationTokenSource();
 
@@ -181,8 +185,12 @@ namespace Sockety.Client
                     return;
                 }
 
-                var bytes = MessagePackSerializer.Serialize(packet);
-                serverUdpSocket.SendTo(bytes, SocketFlags.None, serverUdpPort);
+                var preData = MessagePackSerializer.Serialize(packet);
+                if (CryptService != null)
+                {
+                    preData = CryptService.Encrypt(preData);
+                }
+                serverUdpSocket.SendTo(preData, SocketFlags.None, serverUdpPort);
             }
         }
 
@@ -248,9 +256,14 @@ namespace Sockety.Client
                 try
                 {
                     var CommunicateBuffer = new byte[SocketySetting.MAX_UDP_SIZE];
-                    serverUdpSocket.Receive(CommunicateBuffer);
-                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(CommunicateBuffer);
-
+                    int size = serverUdpSocket.Receive(CommunicateBuffer);
+                    var data = new byte[size];
+                    Array.Copy(CommunicateBuffer, data, data.Length);
+                    if (CryptService != null)
+                    {
+                        data = CryptService.Decrypt(data);
+                    }
+                    var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(data);
                     Task.Run(() => Parent.UdpReceive(packet.clientInfo, packet.PackData));
                 }
                 catch (Exception ex)

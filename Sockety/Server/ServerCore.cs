@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Sockety.Filter;
 using Sockety.Model;
+using Sockety.Service;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,6 +30,9 @@ namespace Sockety.Server
         }
         #endregion
         private ILogger Logger;
+
+        private static string AES_IV = @"pf69DLcGrWFyZcMK";
+        private static string AES_Key = @"9Fix4L4bdGPKeKWY";
 
         private TcpListener MainListener;
         private T Parent;
@@ -80,12 +84,14 @@ namespace Sockety.Server
                         SendConnectSetting(handler.GetStream(), serverSetting);
 
                         Stream CommunicateStream;
+                        SocketyCryptService cryptService = null;
                         if (serverSetting.UseSSL == true){
                             Logger.LogInformation("UseSSL");
                             //SSL設定
                             SslStream sslStream = new SslStream(handler.GetStream());
                             sslStream.AuthenticateAsServer(serverSetting.Certificate, false, System.Security.Authentication.SslProtocols.Tls12, true);
                             CommunicateStream = sslStream as Stream;
+                            cryptService = new SocketyCryptService(AES_IV, AES_Key);
                         }
                         else
                         {
@@ -112,7 +118,8 @@ namespace Sockety.Server
                             _clientInfo: clientInfo,
                             userClass: Parent,
                             logger: Logger,
-                            _filters: SocketyFilters);
+                            _filters: SocketyFilters,
+                            CryptService: cryptService);
 
 
                         clientHub.ConnectionReset = ConnectionReset;
