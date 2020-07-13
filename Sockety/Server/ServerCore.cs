@@ -137,9 +137,13 @@ namespace Sockety.Server
             });
         }
 
+        /// <summary>
+        /// UDPポート情報の初期化
+        /// </summary>
+        /// <param name="StartPort"></param>
+        /// <param name="EndPort"></param>
         public void InitUDP(int StartPort,int EndPort)
         {
-            //UDPポート情報の初期化
             UserCommunicateService<T>.Init(StartPort: StartPort, EndPort: EndPort);
 
         }
