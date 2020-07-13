@@ -370,6 +370,9 @@ namespace Sockety.Client
                 }
                 catch (IOException ex)
                 {
+                }
+                catch (SocketException ex)
+                {
                     Logger.LogInformation(ex.ToString());
                 }
                 catch (Exception ex)

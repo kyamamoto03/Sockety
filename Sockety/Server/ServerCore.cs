@@ -101,24 +101,11 @@ namespace Sockety.Server
                             Logger.LogInformation($"ReConnect ClientInfo ClientID:{clientInfo.ClientID} Name:{clientInfo.Name}");
                         }
 
-                        //Udp接続
-                        var CanUDPConnectPort = UserCommunicateService<T>.Get().Where(x => x.IsConnect == false).First();
-
-                        //Udpポート番号を送信
-                        var portData = MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber);
-                        CommunicateStream.Write(portData, 0, portData.Length);
-
-                        //Udp HolePunching
-                        var ret = UdpConnect(CommunicateStream,CanUDPConnectPort.UdpPortNumber);
-                        CanUDPConnectPort.PunchingSocket = ret.s;
-                        CanUDPConnectPort.PunchingPoint = ret.p;
-                        CanUDPConnectPort.IsConnect = true;
 
                         // クライアントが接続したので、受付スレッドを開始する
                         var clientHub = new ClientHub<T>(_handler: handler,
                             _stream: CommunicateStream,
                             _clientInfo: clientInfo,
-                            udpPort: CanUDPConnectPort,
                             userClass: Parent,
                             logger: Logger,
                             _filters: SocketyFilters);
@@ -170,67 +157,6 @@ namespace Sockety.Server
 
         }
 
-        /// <summary>
-        /// UDP HolePunchingでUDP接続する
-        /// </summary>
-        /// <param name="PortNumber"></param>
-        /// <returns></returns>
-        internal (Socket s, IPEndPoint p) UdpConnect(Stream stream,int PortNumber)
-        {
-            var WaitingServerAddress = IPAddress.Any;
-            IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
-
-            //クライアントが設定してくるIPあどれっす
-            string TargetAddress;
-
-            SocketyPacketUDP controlPacket;
-            //クライアントからのメッセージ(UDPホールパンチング）を待つ
-            //groupEPにNATが変換したアドレス＋ポート番号は入ってくる
-            using (var udpClient = new UdpClient(PortNumber))
-            {
-                //Udp Hole Puchingをするために何かしらのデータを受信する(ここではクライアントが指定したサーバのアドレス)
-                //TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
-                var data = udpClient.Receive(ref groupEP);
-                controlPacket = MessagePackSerializer.Deserialize<SocketyPacketUDP>(data);
-            }
-            TargetAddress = Encoding.UTF8.GetString(controlPacket.PackData);
-
-            byte[] OK = new byte[1] { 0x01 };
-
-            stream.Write(OK, 0, OK.Length);
-           
-            //NATで変換されたIPアドレスおよびポート番号
-            var ip = groupEP.Address.ToString();
-            var port = groupEP.Port;
-
-            var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
-            IPAddress BindAddress;
-            try
-            {
-                BindAddress = IPAddress.Parse(TargetAddress);
-                Logger.LogInformation($"BindAddress : {BindAddress.ToString()}");
-                PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
-            }
-            catch
-            {
-                try
-                {
-                    BindAddress = NetworkInterface.IPAddresses[0];
-                    Logger.LogInformation($"BindAddress : {BindAddress.ToString()}");
-                    PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
-
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-            }
-
-            var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
-
-            return (PunchingSocket, PunchingPoint);
-        }
 
         private bool ClientInfoManagement(ClientInfo clientInfo)
         {
@@ -309,44 +235,47 @@ namespace Sockety.Server
             List<ClientHub<T>> DisConnction = new List<ClientHub<T>>();
 
             List<ClientHub<T>> SendLists;
-            if (GroupLists == null)
+            lock (SocketClient<T>.GetInstance().ClientHubs)
             {
-                SendLists = SocketClient<T>.GetInstance().ClientHubs;
-            }
-            else
-            {
-                SendLists = new List<ClientHub<T>>();
-                lock (SocketClient<T>.GetInstance().ClientHubs)
+                if (GroupLists == null)
                 {
-                    ///送信先をグループで検索しリストを作成
-                    SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
+                    SendLists = SocketClient<T>.GetInstance().ClientHubs;
+                }
+                else
+                {
+                    SendLists = new List<ClientHub<T>>();
+                    lock (SocketClient<T>.GetInstance().ClientHubs)
                     {
-                        foreach (var g in GroupLists)
+                        ///送信先をグループで検索しリストを作成
+                        SocketClient<T>.GetInstance().ClientHubs.ForEach(x =>
                         {
-                            if (x.ClientInfo.JoinGroups.Contains(g) == true)
+                            foreach (var g in GroupLists)
                             {
-                                if (SendLists.Contains(x) == false)
+                                if (x.ClientInfo.JoinGroups.Contains(g) == true)
                                 {
-                                    SendLists.Add(x);
-                                    break;
+                                    if (SendLists.Contains(x) == false)
+                                    {
+                                        SendLists.Add(x);
+                                        break;
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
+
                 }
 
+                SendLists.ForEach(async (x) =>
+                {
+                    try
+                    {
+                        x.SendNonReturn(ClientMethodName, data);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                });
             }
-
-            SendLists.ForEach(async (x) =>
-            {
-                try
-                {
-                    x.SendNonReturn(ClientMethodName, data);
-                }
-                catch (IOException)
-                {
-                }
-            });
         }
 
         /// <summary>

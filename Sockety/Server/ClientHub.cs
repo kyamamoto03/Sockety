@@ -1,15 +1,16 @@
 ﻿using MessagePack;
 using Microsoft.Extensions.Logging;
 using Sockety.Attribute;
-using Sockety.Base;
 using Sockety.Filter;
 using Sockety.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -48,7 +49,6 @@ namespace Sockety.Server
         public ClientHub(TcpClient _handler,
             Stream _stream,
             ClientInfo _clientInfo,
-            UdpPort<T> udpPort,
             T userClass,
             ILogger logger,
             SocketyFilters _filters)
@@ -56,16 +56,10 @@ namespace Sockety.Server
             this.UserClass = userClass;
             this.serverSocket = _handler;
             this.ClientInfo = _clientInfo;
-            this.UdpPort = udpPort;
             this.Logger = logger;
             this.commnicateStream = _stream;
             this.SocketyFilters = _filters;
 
-            MakeHeartBeat();
-
-#pragma warning disable CS4014 // この呼び出しは待機されなかったため、現在のメソッドの実行は呼び出しの完了を待たずに続行されます
-            SurveillanceHeartBeat();
-#pragma warning restore CS4014 // この呼び出しは待機されなかったため、現在のメソッドの実行は呼び出しの完了を待たずに続行されます
         }
 
         public void Dispose()
@@ -138,13 +132,13 @@ namespace Sockety.Server
             }
         }
 
-        private async Task SurveillanceHeartBeat()
+        private void SurveillanceHeartBeat()
         {
             lock (ReceiveHeartBeats)
             {
                 ReceiveHeartBeats.Clear();
             }
-            await Task.Run(() =>
+            Task.Run(() =>
             {
                 while (true)
                 {
@@ -158,14 +152,14 @@ namespace Sockety.Server
                             {
                                 Logger.LogInformation("SurveillanceHeartBeat Done.");
                                 //監視終了
-                                return;
+                                break;
                             }
                         }
                     }
                     Thread.Sleep(5000);
                 }
+                DisConnect();
             });
-            DisConnect();
         }
 
         #endregion
@@ -175,7 +169,7 @@ namespace Sockety.Server
         {
             try
             {
-                lock(lockObject)
+                lock (lockObject)
                 {
                     var packet = new SocketyPacket() { MethodName = ClientMethodName, PackData = data };
                     var d = MessagePackSerializer.Serialize(packet);
@@ -225,16 +219,104 @@ namespace Sockety.Server
 
         public void Run()
         {
+            InitUDP();
+
+            MakeHeartBeat();
+
+            SurveillanceHeartBeat();
+
             var TcpReceiveThread = new Thread(new ThreadStart(ReceiveProcess));
             TcpReceiveThread.Name = "ReceiveProcess";
             TcpReceiveThread.Start();
 
+        }
+        private void InitUDP()
+        {
+            //Udp接続
+            var CanUDPConnectPort = UserCommunicateService<T>.Get().Where(x => x.IsConnect == false).First();
+
+            //Udpポート番号を送信
+            var portData = MessagePackSerializer.Serialize(CanUDPConnectPort.UdpPortNumber);
+            commnicateStream.Write(portData, 0, portData.Length);
+
+            //Udp HolePunching
+            var ret = UdpConnect(commnicateStream, CanUDPConnectPort.UdpPortNumber);
+            CanUDPConnectPort.PunchingSocket = ret.s;
+            CanUDPConnectPort.PunchingPoint = ret.p;
+            CanUDPConnectPort.IsConnect = true;
+
+            this.UdpPort = CanUDPConnectPort;
             //UDPの受信を開始
-            var UdpStateObject = new StateObject() { 
-                Buffer = new byte[SocketySetting.MAX_UDP_SIZE], 
-                workSocket = UdpPort.PunchingSocket };
+            var UdpStateObject = new StateObject()
+            {
+                Buffer = new byte[SocketySetting.MAX_UDP_SIZE],
+                workSocket = UdpPort.PunchingSocket
+            };
 
             UdpPort.PunchingSocket.BeginReceive(UdpStateObject.Buffer, 0, UdpStateObject.Buffer.Length, 0, UdpReceiver, UdpStateObject);
+
+        }
+
+        /// <summary>
+        /// UDP HolePunchingでUDP接続する
+        /// </summary>
+        /// <param name="PortNumber"></param>
+        /// <returns></returns>
+        private (Socket s, IPEndPoint p) UdpConnect(Stream stream, int PortNumber)
+        {
+            var WaitingServerAddress = IPAddress.Any;
+            IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
+
+            //クライアントが設定してくるIPあどれっす
+            string TargetAddress;
+
+            SocketyPacketUDP controlPacket;
+            //クライアントからのメッセージ(UDPホールパンチング）を待つ
+            //groupEPにNATが変換したアドレス＋ポート番号は入ってくる
+            using (var udpClient = new UdpClient(PortNumber))
+            {
+                //Udp Hole Puchingをするために何かしらのデータを受信する(ここではクライアントが指定したサーバのアドレス)
+                //TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
+                var data = udpClient.Receive(ref groupEP);
+                controlPacket = MessagePackSerializer.Deserialize<SocketyPacketUDP>(data);
+            }
+            TargetAddress = Encoding.UTF8.GetString(controlPacket.PackData);
+
+            byte[] OK = new byte[1] { 0x01 };
+
+            stream.Write(OK, 0, OK.Length);
+
+            //NATで変換されたIPアドレスおよびポート番号
+            var ip = groupEP.Address.ToString();
+            var port = groupEP.Port;
+
+            var PunchingSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            //ソースアドレスを設定する(NATが変換できるように、クライアントが指定した宛先を設定)
+            IPAddress BindAddress;
+            try
+            {
+                BindAddress = IPAddress.Parse(TargetAddress);
+                Logger.LogInformation($"BindAddress : {BindAddress.ToString()}");
+                PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
+            }
+            catch
+            {
+                try
+                {
+                    BindAddress = NetworkInterface.IPAddresses[0];
+                    Logger.LogInformation($"BindAddress : {BindAddress.ToString()}");
+                    PunchingSocket.Bind(new IPEndPoint(BindAddress, PortNumber));
+
+                }
+                catch (Exception ex)
+                {
+                    throw ex;
+                }
+            }
+
+            var PunchingPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+
+            return (PunchingSocket, PunchingPoint);
         }
 
         /// <summary>
@@ -267,9 +349,13 @@ namespace Sockety.Server
                         UdpReceiver, state);
                 }
             }
+            catch(SocketException ex)
+            {
+
+            }
             catch (Exception e)
             {
-                Logger.LogInformation(e.ToString());
+                //Logger.LogInformation(e.ToString());
             }
         }
 
@@ -292,7 +378,7 @@ namespace Sockety.Server
                     }
 
                     int bytesRec = commnicateStream.Read(sizeb, 0, sizeof(int));
-                    lock(lockObject)
+                    lock (lockObject)
                     {
                         if (bytesRec > 0)
                         {

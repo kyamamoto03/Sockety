@@ -16,7 +16,7 @@ namespace SocketyClient
         }
         static async Task MainProc()
         {
-            Thread.Sleep(5000);
+            //Thread.Sleep(5000);
             Work w = new Work();
             await w.Start();
         }
