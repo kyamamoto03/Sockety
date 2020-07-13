@@ -256,9 +256,12 @@ namespace Sockety.Server
                 if (bytesRead > 0)
                 {
                     var packet = MessagePackSerializer.Deserialize<SocketyPacketUDP>(state.Buffer);
-                    //親クラスを呼び出す
-                    UserClass.UdpReceive(packet.clientInfo, packet.PackData);
+                    if (packet.PacketType == SocketyPacketUDP.PACKET_TYPE.DATA)
+                    {
+                        //親クラスを呼び出す
+                        UserClass.UdpReceive(packet.clientInfo, packet.PackData);
 
+                    }
                     //  受信を再スタート  
                     client.BeginReceive(state.Buffer, 0, state.Buffer.Length, 0,
                         UdpReceiver, state);

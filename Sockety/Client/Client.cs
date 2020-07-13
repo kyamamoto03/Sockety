@@ -115,7 +115,7 @@ namespace Sockety.Client
                 SendClientInfo(CommunicateStream, clientInfo);
 
                 //Udp接続
-                var UdpInfo = ConnectUdp(ServerHost, ReceiveUdpPort(CommunicateStream));
+                var UdpInfo = ConnectUdp(CommunicateStream,ServerHost, ReceiveUdpPort(CommunicateStream));
 
                 //受信スレッド作成
                 clientReceiver.Run(handler: serverSocket,
@@ -188,7 +188,7 @@ namespace Sockety.Client
         /// <param name="ServerHost"></param>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        private (Socket socket, IPEndPoint point) ConnectUdp(string ServerHost, int PortNumber)
+        private (Socket socket, IPEndPoint point) ConnectUdp(Stream stream, string ServerHost, int PortNumber)
         {
             var sending_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
@@ -205,8 +205,27 @@ namespace Sockety.Client
 
             var sending_end_point = new IPEndPoint(host, PortNumber);
 
-            Thread.Sleep(1000);
-            sending_socket.SendTo(Encoding.UTF8.GetBytes(host.ToString()), sending_end_point);
+            bool OKFlag = false;
+            Task.Run(() => {
+                while (true)
+                {
+                    var packet = new SocketyPacketUDP()
+                    {
+                        PacketType = SocketyPacketUDP.PACKET_TYPE.CONTROL,
+                        PackData = Encoding.UTF8.GetBytes(host.ToString())
+                    };
+                    var packetdata = MessagePackSerializer.Serialize(packet);
+                    sending_socket.SendTo(packetdata, sending_end_point);
+                    if (OKFlag == true)
+                    {
+                        return;
+                    }
+                    Thread.Sleep(100);
+                }
+            });
+            byte[] OK = new byte[1];
+            stream.Read(OK, 0, OK.Length);
+            OKFlag = true;
 
             return (sending_socket, sending_end_point);
         }
@@ -284,7 +303,7 @@ namespace Sockety.Client
 
             var packetID = Guid.NewGuid();
 
-            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = 1,PackData = data };
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = packetID, PacketNo = 1,PackData = data ,PacketType = SocketyPacketUDP.PACKET_TYPE.DATA};
             clientReceiver.UdpSend(packet);
         }
 

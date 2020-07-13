@@ -27,5 +27,13 @@ namespace Sockety.Model
         /// </summary>
         [Key(5)]
         public int PacketNo { get; set; }
+        [Key(6)]
+        public PACKET_TYPE PacketType { get; set; }
+
+        public enum PACKET_TYPE
+        {
+            DATA,
+            CONTROL
+        }
     }
 }

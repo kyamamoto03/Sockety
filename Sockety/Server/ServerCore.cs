@@ -108,7 +108,7 @@ namespace Sockety.Server
                         CommunicateStream.Write(portData, 0, portData.Length);
 
                         //Udp HolePunching
-                        var ret = UdpConnect(CanUDPConnectPort.UdpPortNumber);
+                        var ret = UdpConnect(CommunicateStream,CanUDPConnectPort.UdpPortNumber);
                         CanUDPConnectPort.PunchingSocket = ret.s;
                         CanUDPConnectPort.PunchingPoint = ret.p;
                         CanUDPConnectPort.IsConnect = true;
@@ -164,21 +164,30 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        internal (Socket s, IPEndPoint p) UdpConnect(int PortNumber)
+        internal (Socket s, IPEndPoint p) UdpConnect(Stream stream,int PortNumber)
         {
             var WaitingServerAddress = IPAddress.Any;
             IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
 
             //クライアントが設定してくるIPあどれっす
             string TargetAddress;
+
+            SocketyPacketUDP controlPacket;
             //クライアントからのメッセージ(UDPホールパンチング）を待つ
             //groupEPにNATが変換したアドレス＋ポート番号は入ってくる
             using (var udpClient = new UdpClient(PortNumber))
             {
                 //Udp Hole Puchingをするために何かしらのデータを受信する(ここではクライアントが指定したサーバのアドレス)
-                TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
+                //TargetAddress = Encoding.UTF8.GetString(udpClient.Receive(ref groupEP));
+                var data = udpClient.Receive(ref groupEP);
+                controlPacket = MessagePackSerializer.Deserialize<SocketyPacketUDP>(data);
             }
+            TargetAddress = Encoding.UTF8.GetString(controlPacket.PackData);
 
+            byte[] OK = new byte[1] { 0x01 };
+
+            stream.Write(OK, 0, OK.Length);
+           
             //NATで変換されたIPアドレスおよびポート番号
             var ip = groupEP.Address.ToString();
             var port = groupEP.Port;
@@ -238,7 +247,7 @@ namespace Sockety.Server
                 throw new SocketyException(SocketyException.SOCKETY_EXCEPTION_ERROR.BUFFER_OVER);
             }
 
-            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = Guid.NewGuid(), PacketNo = 1,PackData = data };
+            var packet = new SocketyPacketUDP { MethodName = "Udp", clientInfo = clientInfo, PacketID = Guid.NewGuid(), PacketNo = 1,PackData = data,PacketType = SocketyPacketUDP.PACKET_TYPE.DATA };
 
             List<ClientHub<T>> SendLists;
             lock (SocketClient<T>.GetInstance().ClientHubs)
