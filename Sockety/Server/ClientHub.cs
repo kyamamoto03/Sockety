@@ -123,14 +123,17 @@ namespace Sockety.Server
         /// </summary>
         private void ReceiveHeartBeat(SocketyPacket packet)
         {
-            lock (ReceiveHeartBeats)
+            if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
             {
-                if (packet.SocketyPacketType == SocketyPacket.SOCKETY_PAKCET_TYPE.FinishHeartBeat)
+                Task.Run(() =>
                 {
                     //正常な切断処理を行う
                     NormalDisConnect();
-                }
-                else
+                });
+            }
+            else
+            {
+                lock (ReceiveHeartBeats)
                 {
                     ReceiveHeartBeats.Add(new HeartBeat { ReceiveDate = DateTime.Now });
                 }
@@ -272,7 +275,7 @@ namespace Sockety.Server
         /// </summary>
         /// <param name="PortNumber"></param>
         /// <returns></returns>
-        private (Socket s, IPEndPoint p) UdpConnect(Stream stream, int PortNumber,SocketyCryptService cryptService)
+        private (Socket s, IPEndPoint p) UdpConnect(Stream stream, int PortNumber, SocketyCryptService cryptService)
         {
             var WaitingServerAddress = IPAddress.Any;
             IPEndPoint groupEP = new IPEndPoint(WaitingServerAddress, PortNumber);
@@ -369,7 +372,7 @@ namespace Sockety.Server
                         UdpReceiver, state);
                 }
             }
-            catch(SocketException ex)
+            catch (SocketException ex)
             {
 
             }
@@ -484,11 +487,13 @@ namespace Sockety.Server
         /// <returns></returns>
         private void DisConnect()
         {
-            Logger.LogInformation($"DisConnect:{ClientInfo.ClientID}");
-            NormalDisConnect();
-            //通信切断
-            Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
-
+            if (serverSocket != null)
+            {
+                Logger.LogInformation($"DisConnect:{ClientInfo.ClientID}");
+                NormalDisConnect();
+                //通信切断
+                Task.Run(() => ConnectionReset?.Invoke(ClientInfo));
+            }
         }
         private void NormalDisConnect()
         {

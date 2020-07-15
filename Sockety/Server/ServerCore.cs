@@ -138,6 +138,10 @@ namespace Sockety.Server
                     }
                     catch (Exception ex)
                     {
+                        if (stoppingCts.IsCancellationRequested == true)
+                        {
+                            return;
+                        }
                         Console.WriteLine(ex.ToString());
                     }
                 }
