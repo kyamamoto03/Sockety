@@ -90,3 +90,6 @@ dotnet add package Sockety
 ・Example/SocketyClient(サンプルクライアント）
 ・Example/SocketyClientUWP(サンプルクライアント版)
 
+# Repositoty
+[Github](https://github.com/kyamamoto03/Sockety)
+[Nuget](https://www.nuget.org/packages/Sockety/)

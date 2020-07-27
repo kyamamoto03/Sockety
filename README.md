@@ -91,3 +91,6 @@ Example/SocketyServer (sample server)
 Example/SocketyClient (sample client)
 Example/SocketyClientUWP (sample client version)
 
+# Repositoty
+[Github](https://github.com/kyamamoto03/Sockety)
+[Nuget](https://www.nuget.org/packages/Sockety/)
