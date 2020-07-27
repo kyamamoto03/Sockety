@@ -1,92 +1,93 @@
+[Japanese Document](README-ja.md)
 # Sockety
-.NET Coreで書いたネットワークフレームワークです。
-Socketをラッピングし、簡単にサーバ、クライアント通信を行えます。
-## 通信方式
-Socketyでクライアントからサーバに接続するとTCPおよびUDPを接続します。
-## 機能
-・切断感知（内部利用）
-・クライアント→サーバ通信（サーバからの戻り値あり）
-・サーバ→クライアントのプッシュ通信
-・UDPを使った軽量通信
-・SSLを利用した暗号化通信(TCPのみ)
-・AESを使用したUDP通信
-・認証トークンによる通信時の認証
-です。
-[UDPはHolePunching](https://qiita.com/k-yamamoto/items/1bc295f83c873921b408)でNATを回避しています
+It is a network framework written in .NET Core.
+It wraps Socket and allows for easy server-client communication.
+## Communication Method.
+When a client connects to a server in Sockety, it connects TCP and UDP.
+## Function.
+Disconnection detection (internal use)
+Client to server communication (with return value from server)
+Server to client push communication
+Lightweight communication using UDP
+Encrypted communication using SSL (TCP only)
+UDP communication using AES
+Authentication at the time of communication using an authentication token
+It is.
+[UDP avoids NAT with [HolePunching](https://qiita.com/k-yamamoto/items/1bc295f83c873921b408)
 
-# 開発経緯
-.Net Coreで利用しマルチプラットフォームで通信を行う必要があり、MagicOnionを用いて通信を行っていました。
-MagicOnionは通信コアにgRPCを使っており、ネイティブコードを利用しています。マルチプラットフォームで通信を行う場合、残念ながらARM版Windowsでは利用できないこと画面しました。
-※ARM版Windowsでの動作はあまり必要ないと思いますがHololens2で利用するためです。
+# Development History
+Net Core, which requires multi-platform communication, and MagicOnion is used for this purpose.
+MagicOnion uses gRPC for its communication core and uses native code. MagicOnion uses gRPC for the communication core and uses native code.
+It's not really necessary to run on Windows ARM, but it's for Hololens2.
 
 # QuickStart
-サーバ側
+server-side
 
-```
+````
 int PortNumber = 11000;
 //SSL Setting
-var serverSetting = new ServerSetting { UseSSL = true };
+var serverSetting = new ServerSetting { UseSSL = true }
 serverSetting.LoadCertificateFile("++++.pfx", "certPassword");
 
-//Authentication Filter
+//Authentication Filter.
 var authtificationFilter = new LocalAuthentificationFilter();
 serverCore.SocketyFilters.Add(authtificationFilter);
 
-//UDP Port Setting
+Add(authtificationFilter); //UDP Port Setting
 serverCore.InitUDP(11000, 11120);
 //Sockety Start
 serverCore.Start(localEndPoint: new IPEndPoint(IPAddress.Any, PortNumber);, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
-```
+````
 
-```
-Client.Connect("localhost",11000,"MyApp",this);
-```
+````
+Client.Connect("localhost",11000, "MyApp",this);
+``.
 
 
-クライアント(呼ぶ側)TCP
+Client (calling party) TCP
 
-``` 
+```` 
 client.Send("Join", Encoding.ASCII.GetBytes($"{DateTime.Now.ToString()}"));
-```
-とやるとサーバのメソッド(この場合はJoin)を呼び、引数である現在時刻を渡すことが出来ます。
+````
+you can call a method on the server (in this case, Join) and pass in the current time as an argument.
 
-サーバ(呼ばれる側)TCP
+Server (the one being called) TCP
 
-```
+````
 public byte[] Join(ClientInfo sendclientInfo,byte[] JoinDate)
-```
-サーバの受け側はこんな感じです。
-ClientInfo→送信元のクライアント情報
-JoinDate→client.Sendの第２引数
+````
+The receiving end of the server looks like this
+ClientInfo→Source client information
+JoinDate→client.Send's second argument
 
-クライアント(呼ぶ側)UDP
+Client (calling party) UDP
 
-```
+````
 client.UdpSend(Encoding.ASCII.GetBytes(DateTime.Now.ToString()));
-```
-サーバ(呼ばれる側)UDP
-```
+``.
+Server (the called party) UDP
+````
 public void UdpReceive(ClientInfo sender, byte[] obj)
 {
-    //クライアントデータを全クライアントにブロードキャスト
+    //Broadcasting client data to all clients
     serverCore.BroadCastUDPNoReturn(sender, obj);
 
     string str = Encoding.ASCII.GetString(obj);
 }
-```
+````
 
-# パッケージ
+# Package.
 
-```
+````
 dotnet add package Sockety
-```
-で取得してください
+````
+Get it at
 
 
-# 使い方
-詳細な使い方は追って記述しますが、まずはExampleを参照してください。
-・Sockety(本体）
-・Example/SocketyServer(サンプルサーバ）
-・Example/SocketyClient(サンプルクライアント）
-・Example/SocketyClientUWP(サンプルクライアント版)
+# Usage.
+I will describe the details of how to use it later, but please refer to the Example first.
+Sockety (body)
+Example/SocketyServer (sample server)
+Example/SocketyClient (sample client)
+Example/SocketyClientUWP (sample client version)
 
