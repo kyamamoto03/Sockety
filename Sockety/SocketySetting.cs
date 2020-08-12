@@ -5,7 +5,7 @@
         /// <summary>
         /// 内部バッファサイズ
         /// </summary>
-        public static int MAX_BUFFER = 1000000;
+        public static int MAX_BUFFER = 15000000;
 
         /// <summary>
         /// UDPの送信最大サイズ
