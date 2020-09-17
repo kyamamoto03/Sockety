@@ -54,7 +54,7 @@ namespace Sockety.Server
         }
 
         private ServerSetting serverSetting;
-        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent, ServerSetting _serverSetting = null)
+        public void Start(IPEndPoint localEndPoint, CancellationTokenSource _stoppingCts, T parent, ServerSetting _serverSetting = null,int HeartBeatTimeOut = 2000)
         {
             Parent = parent;
             stoppingCts = _stoppingCts;
@@ -64,6 +64,7 @@ namespace Sockety.Server
             {
                 serverSetting = new ServerSetting { UseSSL = false };
             }
+            SocketySetting.HEART_BEAT_LOST_TIME = HeartBeatTimeOut;
 
             // メイン接続のTCP/IPを作成
             MainListener = new TcpListener(localEndPoint.Address, localEndPoint.Port);

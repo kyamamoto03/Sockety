@@ -62,7 +62,7 @@ namespace SocketyClient
 
             try
             {
-                if (client.Connect("localhost", 11000, "ConsoleApp", this) == true)
+                if (client.Connect("localhost", 11000, "ConsoleApp", this,10000) == true)
                 {
 
                     var tokenb = await client.Send("Authentification", null);

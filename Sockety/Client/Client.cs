@@ -39,13 +39,15 @@ namespace Sockety.Client
         /// <param name="PortNumber"></param>
         /// <param name="UserName"></param>
         /// <param name="parent"></param>
-        public bool Connect(string ServerHost, int portNumber, string userName, T parent)
+        public bool Connect(string ServerHost, int portNumber, string userName, T parent, int HeartBeatTimeOut = 2000)
         {
             this.ServerHost = ServerHost;
             this.PortNumber = portNumber;
             this.UserName = userName;
             clientReceiver.ConnectionReset = ConnectionReset;
             Parent = parent;
+
+            SocketySetting.HEART_BEAT_LOST_TIME = HeartBeatTimeOut;
 
             //新規の接続なのでClientInfoを作成
             clientInfo = CreateNewClientInfo(UserName);

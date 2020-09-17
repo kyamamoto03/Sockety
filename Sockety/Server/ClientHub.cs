@@ -471,6 +471,7 @@ namespace Sockety.Server
                 }
                 catch (IOException ex)
                 {
+                    Thread.Sleep(1000);
                 }
                 catch (Exception ex)
                 {

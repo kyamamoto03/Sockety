@@ -102,7 +102,7 @@ namespace SocketyServer
             serverCore.SocketyFilters.Add(authtificationFilter);
 
             serverCore.InitUDP(11000, 11120);
-            serverCore.Start(localEndPoint: localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting);
+            serverCore.Start(localEndPoint: localEndPoint, _stoppingCts: _stoppingCts, parent: this, _serverSetting: serverSetting,HeartBeatTimeOut: 10000);
 
             int cnt = 0;
             while (!_stoppingCts.IsCancellationRequested)

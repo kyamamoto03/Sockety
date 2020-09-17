@@ -18,7 +18,7 @@
         /// <summary>
         /// HeartBeatの切断感知時間
         /// </summary>
-        public static int HEART_BEAT_LOST_TIME = 2000;
+        public static int HEART_BEAT_LOST_TIME { get; set; } = 2000;
         /// <summary>
         /// サーバの返信待ち時間
         /// </summary>
